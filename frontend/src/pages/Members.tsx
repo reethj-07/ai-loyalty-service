@@ -154,7 +154,7 @@ export default function Members() {
   };
 
   const isValidPhone = (phone: string): boolean => {
-    return /^[\d\s\-\+\(\)]+$/.test(phone) && phone.replace(/\D/g, "").length >= 10;
+    return /^[\d\s+()-]+$/.test(phone) && phone.replace(/\D/g, "").length >= 10;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
