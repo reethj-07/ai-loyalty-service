@@ -1,4 +1,6 @@
 import json
+import os
+import time
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict
 
@@ -15,6 +17,8 @@ from app.agents.tools import (
     get_member_segments_tool,
     retrieve_similar_campaigns_tool,
 )
+from app.monitoring.llm_observability import record_llm_call
+from app.monitoring.metrics import LLM_LATENCY_SECONDS, LLM_TOKENS_USED
 
 
 def _safe_json(value: Any) -> dict:
@@ -30,7 +34,36 @@ def _safe_json(value: Any) -> dict:
     return {"value": str(value)}
 
 
+def _record_node_observability(
+    node: str,
+    model: str,
+    provider: str,
+    prompt_text: str,
+    output_text: str,
+    latency_seconds: float,
+):
+    tokens_in = max(1, len(prompt_text.split())) if prompt_text else 0
+    tokens_out = max(1, len(output_text.split())) if output_text else 0
+
+    LLM_LATENCY_SECONDS.labels(provider=provider, model=model).observe(latency_seconds)
+    LLM_TOKENS_USED.labels(provider=provider, type="input").inc(tokens_in)
+    LLM_TOKENS_USED.labels(provider=provider, type="output").inc(tokens_out)
+
+    record_llm_call(
+        {
+            "timestamp": datetime.now().isoformat(),
+            "node": node,
+            "provider": provider,
+            "model": model,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "latency_seconds": round(latency_seconds, 4),
+        }
+    )
+
+
 async def context_gatherer(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     member_id = str(state.get("member_context", {}).get("member_id", ""))
 
     segment_data = await get_member_segments_tool.ainvoke({"member_id": member_id})
@@ -52,7 +85,7 @@ async def context_gatherer(state: LoyaltyAgentState) -> LoyaltyAgentState:
         {"tool": "get_behavioral_alerts_tool", "member_id": member_id},
     ])
 
-    return {
+    result = {
         **state,
         "segment_data": segment_data,
         "behavioral_signals": behavioral_alerts,
@@ -60,10 +93,22 @@ async def context_gatherer(state: LoyaltyAgentState) -> LoyaltyAgentState:
         "tool_calls_made": tool_calls,
         "iteration_count": int(state.get("iteration_count", 0)) + 1,
     }
+    _record_node_observability(
+        node="context_gatherer",
+        model="tools",
+        provider="internal",
+        prompt_text=member_id,
+        output_text=json.dumps(result.get("segment_data", {}), default=str),
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     llm = get_llm(streaming=False)
+    provider = os.getenv("LLM_PROVIDER", "groq")
+    model = "llama-3.3-70b-versatile" if provider == "groq" else "claude-3-5-haiku-latest"
 
     rag_query = (
         f"Segment context: {json.dumps(state.get('segment_data', {}), default=str)} "
@@ -106,7 +151,7 @@ async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
     messages = list(state.get("messages", []))
     messages.append(HumanMessage(content=prompt))
 
-    return {
+    result = {
         **state,
         "messages": messages,
         "reasoning_trace": trace,
@@ -117,9 +162,19 @@ async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
         },
         "tool_calls_made": tool_calls,
     }
+    _record_node_observability(
+        node="reasoning_node",
+        model=model,
+        provider=provider,
+        prompt_text=prompt,
+        output_text=json.dumps(parsed, default=str),
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def proposal_generator(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     member_id = str(state.get("member_context", {}).get("member_id", ""))
     reasoning = state.get("member_context", {}).get("reasoning", {})
     target_segment = reasoning.get("recommended_segment") or state.get("segment_data", {}).get("segment", {}).get("segment", "general")
@@ -146,14 +201,24 @@ async def proposal_generator(state: LoyaltyAgentState) -> LoyaltyAgentState:
         }
     )
 
-    return {
+    result = {
         **state,
         "campaign_proposals": proposals,
         "reasoning_trace": trace,
     }
+    _record_node_observability(
+        node="proposal_generator",
+        model="tools",
+        provider="internal",
+        prompt_text=summary,
+        output_text=json.dumps(proposal, default=str),
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def roi_estimator(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     if not state.get("campaign_proposals"):
         return state
 
@@ -181,14 +246,24 @@ async def roi_estimator(state: LoyaltyAgentState) -> LoyaltyAgentState:
         }
     )
 
-    return {
+    result = {
         **state,
         "campaign_proposals": proposals,
         "reasoning_trace": trace,
     }
+    _record_node_observability(
+        node="roi_estimator",
+        model="tools",
+        provider="internal",
+        prompt_text=json.dumps(latest, default=str),
+        output_text=json.dumps(roi, default=str),
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def confidence_scorer(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     confidence = 0.5
     if state.get("campaign_proposals"):
         expected_roi = float(state["campaign_proposals"][-1].get("expected_roi", 0.0) or 0.0)
@@ -208,14 +283,24 @@ async def confidence_scorer(state: LoyaltyAgentState) -> LoyaltyAgentState:
     member_context = dict(state.get("member_context", {}))
     member_context["confidence"] = confidence
 
-    return {
+    result = {
         **state,
         "member_context": member_context,
         "reasoning_trace": trace,
     }
+    _record_node_observability(
+        node="confidence_scorer",
+        model="heuristic",
+        provider="internal",
+        prompt_text=json.dumps(state.get("campaign_proposals", []), default=str),
+        output_text=json.dumps({"confidence": confidence}),
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def human_approval_gate(state: LoyaltyAgentState) -> LoyaltyAgentState:
+    started_at = time.perf_counter()
     confidence = float(state.get("member_context", {}).get("confidence", 0.0) or 0.0)
     decision = "auto_propose" if confidence > 0.85 else "flag_for_review"
 
@@ -233,11 +318,20 @@ async def human_approval_gate(state: LoyaltyAgentState) -> LoyaltyAgentState:
         }
     )
 
-    return {
+    result = {
         **state,
         "campaign_proposals": proposals,
         "reasoning_trace": trace,
     }
+    _record_node_observability(
+        node="human_approval_gate",
+        model="policy",
+        provider="internal",
+        prompt_text=str(confidence),
+        output_text=decision,
+        latency_seconds=time.perf_counter() - started_at,
+    )
+    return result
 
 
 async def auto_propose(state: LoyaltyAgentState) -> LoyaltyAgentState:

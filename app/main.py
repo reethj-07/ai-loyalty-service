@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI
+from fastapi import Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -8,7 +9,9 @@ load_dotenv()
 
 from app.api.v1.router import api_router
 from app.core.logging import setup_logging
+from app.core.telemetry import setup_telemetry
 from app.core.middleware import correlation_id_middleware, auth_middleware
+from app.monitoring.metrics import prometheus_payload
 
 # -----------------------------
 # App Bootstrap
@@ -21,6 +24,8 @@ app = FastAPI(
     version="0.1.0",
     openapi_version="3.1.0",
 )
+
+setup_telemetry(app)
 
 # -----------------------------
 # CORS Configuration
@@ -89,6 +94,12 @@ async def version_info():
         "service_version": "0.1.0",
         "api_version": "v1",
     }
+
+
+@app.get("/metrics", tags=["monitoring"])
+async def metrics():
+    payload, content_type = prometheus_payload()
+    return Response(content=payload, media_type=content_type)
 
 # -----------------------------
 # API Routes

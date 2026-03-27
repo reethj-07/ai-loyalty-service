@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from app.celery_app import celery_app
 from app.core.ws_manager import manager
+from app.monitoring.metrics import CAMPAIGN_PROPOSALS_TOTAL
 from app.services.ai_service import get_ai_service
 
 
@@ -20,6 +21,8 @@ def generate_campaign_proposal(self, member_id: str, trigger_event: Dict[str, An
         prompt = f"Generate campaign proposal from trigger: {trigger_event}"
 
     result = asyncio.run(ai_service.run_member_pipeline(member_id=member_id, prompt=prompt))
+    segment = ((result.get("proposal") or {}).get("target_segment") or "unknown").lower()
+    CAMPAIGN_PROPOSALS_TOTAL.labels(segment=segment, status="generated").inc()
 
     asyncio.run(
         manager.broadcast(

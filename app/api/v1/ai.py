@@ -9,6 +9,7 @@ from app.services.campaign_tracker import get_campaign_tracker
 from app.services.ai_message_generator import get_message_generator
 from app.ml.campaign_metrics_estimator import get_campaign_estimator
 from app.services.ai_service import get_ai_service
+from app.monitoring.llm_observability import get_recent_llm_calls
 
 router = APIRouter(
     tags=["AI"]
@@ -39,6 +40,14 @@ async def stream_agentic_pipeline(member_id: str, prompt: Optional[str] = None):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/metrics")
+async def get_ai_metrics(limit: int = Query(100, ge=1, le=100)):
+    """
+    Return recent LLM/LangGraph node execution telemetry.
+    """
+    return {"items": get_recent_llm_calls(limit=limit)}
 
 
 @router.get("/recommendations")

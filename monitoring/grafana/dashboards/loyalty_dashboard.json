@@ -1,0 +1,34 @@
+{
+  "title": "Loyalty AI Observability",
+  "uid": "loyalty-ai-observability",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Campaigns",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "active_campaigns_count", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Campaign Proposals",
+      "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0},
+      "targets": [{"expr": "sum by (segment,status) (rate(campaign_proposals_total[5m]))", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Behavioral Alerts",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+      "targets": [{"expr": "sum by (alert_type) (rate(behavioral_alerts_total[5m]))", "refId": "A"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Latency (p95)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le,provider,model))", "refId": "A"}]
+    }
+  ]
+}

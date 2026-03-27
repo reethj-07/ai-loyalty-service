@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from app.celery_app import celery_app
 from app.core.ws_manager import manager
+from app.monitoring.metrics import BEHAVIORAL_ALERTS_TOTAL
 from app.repositories.supabase_members_repo import members_repo
 from app.workers.event_processor import process_single_event
 from app.tasks.ai_tasks import generate_campaign_proposal
@@ -38,6 +39,7 @@ def scan_member(self, member_id: str, payload: Dict[str, Any]):
     )
 
     if result.get("signals_count", 0) > 0:
+        BEHAVIORAL_ALERTS_TOTAL.labels(alert_type="transaction_signal").inc(result.get("signals_count", 0))
         asyncio.run(
             manager.broadcast(
                 "alerts",
