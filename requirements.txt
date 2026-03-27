@@ -36,3 +36,5 @@ langchain-anthropic>=0.3.0
 langchain-groq>=0.2.0
 langchain-core>=0.3.0
 sentence-transformers>=3.0.0
+celery[redis]>=5.4.0
+flower>=2.0.0

@@ -12,6 +12,7 @@ from app.api.v1.realtime import router as realtime_router
 from app.api.v1.agents import router as agents_router
 from app.api.v1.segments import router as segments_router
 from app.api.v1.ml import router as ml_router
+from app.api.v1.events import router as events_router
 
 api_router = APIRouter()
 
@@ -20,6 +21,7 @@ api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
 api_router.include_router(agents_router, prefix="/agents", tags=["Autonomous Agents"])
 api_router.include_router(members_router, prefix="/members", tags=["Members"])
 api_router.include_router(transactions_router, prefix="/transactions", tags=["Transactions"])
+api_router.include_router(events_router, tags=["Events"])
 api_router.include_router(campaigns_router, prefix="/campaigns", tags=["Campaigns"])
 api_router.include_router(segments_router, prefix="/segments", tags=["Segments"])
 api_router.include_router(ml_router, prefix="/ml", tags=["ML"])
