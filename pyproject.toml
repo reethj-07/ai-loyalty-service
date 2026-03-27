@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ai-loyalty-service"
+version = "0.1.0"
+description = "Agentic AI microservice for loyalty intelligence"
+authors = ["Your Team"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.110.0"
+uvicorn = "^0.27.0"
+pydantic = "^2.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
