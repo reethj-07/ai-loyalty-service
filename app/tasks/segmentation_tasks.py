@@ -1,6 +1,7 @@
 import asyncio
 
 from app.celery_app import celery_app
+from app.core.ws_manager import manager
 from app.services.segmentation_service import get_segmentation_service
 
 
@@ -13,7 +14,17 @@ from app.services.segmentation_service import get_segmentation_service
 )
 def run_full_segmentation(self):
     service = get_segmentation_service()
-    return asyncio.run(service.get_segment_stats())
+    result = asyncio.run(service.get_segment_stats())
+    asyncio.run(
+        manager.broadcast(
+            "alerts",
+            {
+                "type": "segmentation_refreshed",
+                "clusters": result.get("clusters", {}),
+            },
+        )
+    )
+    return result
 
 
 @celery_app.task(
@@ -25,4 +36,14 @@ def run_full_segmentation(self):
 )
 def retrain_clustering_model(self):
     service = get_segmentation_service()
-    return asyncio.run(service.retrain())
+    result = asyncio.run(service.retrain())
+    asyncio.run(
+        manager.broadcast(
+            "alerts",
+            {
+                "type": "segmentation_retrained",
+                "result": result,
+            },
+        )
+    )
+    return result

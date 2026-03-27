@@ -18,6 +18,7 @@ from app.schemas.campaign_proposal import CampaignProposal
 from app.repositories.supabase_campaigns_repo import campaigns_repo
 from app.schemas.events import TransactionEvent
 from app.services.campaign_executor import CampaignExecutor
+from app.core.ws_manager import manager
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,15 @@ async def process_single_event(event: Dict):
             campaign_id,
             amount=payload.amount,
             incentive_cost=payload.amount * 0.02,
+        )
+        await manager.broadcast(
+            f"kpis/{campaign_id}",
+            {
+                "type": "campaign_kpi_update",
+                "campaign_id": campaign_id,
+                "amount": payload.amount,
+                "member_id": member_id,
+            },
         )
 
     return {

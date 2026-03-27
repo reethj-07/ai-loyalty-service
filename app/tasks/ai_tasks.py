@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict
 
 from app.celery_app import celery_app
+from app.core.ws_manager import manager
 from app.services.ai_service import get_ai_service
 
 
@@ -18,4 +19,18 @@ def generate_campaign_proposal(self, member_id: str, trigger_event: Dict[str, An
     if trigger_event:
         prompt = f"Generate campaign proposal from trigger: {trigger_event}"
 
-    return asyncio.run(ai_service.run_member_pipeline(member_id=member_id, prompt=prompt))
+    result = asyncio.run(ai_service.run_member_pipeline(member_id=member_id, prompt=prompt))
+
+    asyncio.run(
+        manager.broadcast(
+            "proposals",
+            {
+                "type": "proposal_generated",
+                "member_id": member_id,
+                "proposal": result.get("proposal"),
+                "reasoning_trace": result.get("reasoning_trace", []),
+            },
+        )
+    )
+
+    return result

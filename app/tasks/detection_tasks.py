@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict
 
 from app.celery_app import celery_app
+from app.core.ws_manager import manager
 from app.repositories.supabase_members_repo import members_repo
 from app.workers.event_processor import process_single_event
 from app.tasks.ai_tasks import generate_campaign_proposal
@@ -24,6 +25,29 @@ def scan_member(self, member_id: str, payload: Dict[str, Any]):
             }
         )
     )
+
+    asyncio.run(
+        manager.broadcast(
+            "transactions",
+            {
+                "type": "transaction_processed",
+                "member_id": member_id,
+                "result": result,
+            },
+        )
+    )
+
+    if result.get("signals_count", 0) > 0:
+        asyncio.run(
+            manager.broadcast(
+                "alerts",
+                {
+                    "type": "behavioral_alert",
+                    "member_id": member_id,
+                    "signals_count": result.get("signals_count", 0),
+                },
+            )
+        )
 
     if result.get("proposal_candidate"):
         generate_campaign_proposal.delay(member_id, payload)
