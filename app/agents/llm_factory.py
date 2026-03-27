@@ -46,28 +46,36 @@ def get_llm(streaming: bool = False):
 
         anthropic_key = settings.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
         if anthropic_key:
-            from langchain_anthropic import ChatAnthropic
+            try:
+                from langchain_anthropic import ChatAnthropic
+            except ImportError:
+                ChatAnthropic = None
 
-            return ChatAnthropic(
-                model="claude-3-5-haiku-latest",
-                anthropic_api_key=anthropic_key,
-                temperature=0.2,
-                streaming=streaming,
-            )
+            if ChatAnthropic:
+                return ChatAnthropic(
+                    model="claude-3-5-haiku-latest",
+                    anthropic_api_key=anthropic_key,
+                    temperature=0.2,
+                    streaming=streaming,
+                )
 
         return FallbackChatModel()
 
     if provider == "anthropic":
         anthropic_key = settings.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
         if anthropic_key:
-            from langchain_anthropic import ChatAnthropic
+            try:
+                from langchain_anthropic import ChatAnthropic
+            except ImportError:
+                ChatAnthropic = None
 
-            return ChatAnthropic(
-                model="claude-3-5-haiku-latest",
-                anthropic_api_key=anthropic_key,
-                temperature=0.2,
-                streaming=streaming,
-            )
+            if ChatAnthropic:
+                return ChatAnthropic(
+                    model="claude-3-5-haiku-latest",
+                    anthropic_api_key=anthropic_key,
+                    temperature=0.2,
+                    streaming=streaming,
+                )
 
         groq_key = settings.groq_api_key or os.getenv("GROQ_API_KEY")
         if groq_key:
