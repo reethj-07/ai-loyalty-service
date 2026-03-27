@@ -13,6 +13,7 @@ from app.agents.tools import (
     generate_campaign_proposal_tool,
     get_behavioral_alerts_tool,
     get_member_segments_tool,
+    retrieve_similar_campaigns_tool,
 )
 
 
@@ -64,11 +65,20 @@ async def context_gatherer(state: LoyaltyAgentState) -> LoyaltyAgentState:
 async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
     llm = get_llm(streaming=False)
 
+    rag_query = (
+        f"Segment context: {json.dumps(state.get('segment_data', {}), default=str)} "
+        f"Behavioral signals: {json.dumps(state.get('behavioral_signals', []), default=str)}"
+    )
+    similar_campaigns = await retrieve_similar_campaigns_tool.ainvoke(
+        {"query_text": rag_query, "top_k": 3}
+    )
+
     prompt = (
         "You are a loyalty AI strategist. Analyze the segment and behavioral alerts, "
         "then respond as JSON with keys: summary, patterns, recommended_segment.\n\n"
         f"Segment data: {json.dumps(state.get('segment_data', {}), default=str)}\n"
-        f"Behavioral signals: {json.dumps(state.get('behavioral_signals', []), default=str)}"
+        f"Behavioral signals: {json.dumps(state.get('behavioral_signals', []), default=str)}\n"
+        f"Similar successful campaigns: {json.dumps(similar_campaigns, default=str)}"
     )
 
     response = await llm.ainvoke([HumanMessage(content=prompt)])
@@ -80,6 +90,16 @@ async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
             "node": "reasoning_node",
             "timestamp": datetime.now().isoformat(),
             "message": parsed.get("summary", "Reasoned over current member signals"),
+            "rag_matches": len(similar_campaigns or []),
+        }
+    )
+
+    tool_calls = list(state.get("tool_calls_made", []))
+    tool_calls.append(
+        {
+            "tool": "retrieve_similar_campaigns_tool",
+            "query": rag_query[:400],
+            "matches": len(similar_campaigns or []),
         }
     )
 
@@ -93,7 +113,9 @@ async def reasoning_node(state: LoyaltyAgentState) -> LoyaltyAgentState:
         "member_context": {
             **state.get("member_context", {}),
             "reasoning": parsed,
+            "similar_campaigns": similar_campaigns,
         },
+        "tool_calls_made": tool_calls,
     }
 
 

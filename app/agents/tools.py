@@ -597,3 +597,36 @@ async def estimate_roi_tool(member_id: str, campaign_type: str, discount_percent
         "estimated_uplift": round(expected_roi * 1.7, 3),
         "rationale": "Historical uplift baseline adjusted by campaign type and discount intensity",
     }
+
+
+@tool
+async def retrieve_similar_campaigns_tool(query_text: str, top_k: int = 3) -> list:
+    """
+    Semantic search over past campaigns to find similar successful ones.
+    Use this before generating a new proposal to ground recommendations
+    in what has worked historically for similar customer segments.
+
+    Args:
+        query_text: Natural-language campaign context to embed and search.
+        top_k: Maximum number of similar campaigns to return.
+
+    Returns:
+        List of matching campaigns including similarity and ROI fields.
+    """
+    from app.core.supabase_client import get_supabase
+    from app.ml.embeddings import EmbeddingService
+
+    embedding_service = EmbeddingService()
+    vector = embedding_service.embed_text(query_text)
+    vector_literal = "[" + ",".join(f"{value:.8f}" for value in vector) + "]"
+
+    supabase = get_supabase(use_service_key=True)
+
+    try:
+        response = supabase.rpc(
+            "match_campaigns_by_embedding",
+            {"query_embedding": vector_literal, "match_count": int(top_k)},
+        ).execute()
+        return response.data or []
+    except Exception:
+        return []
