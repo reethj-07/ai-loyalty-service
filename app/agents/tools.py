@@ -461,9 +461,9 @@ async def get_member_segments_tool(member_id: str) -> dict:
     Returns:
         A dictionary containing segmentation details for the member.
     """
-    from app.services.auto_segmentation import get_auto_segmentation_service
+    from app.services.segmentation_service import get_segmentation_service
 
-    service = get_auto_segmentation_service()
+    service = get_segmentation_service()
     result = await service.get_member_segment(member_id)
     return {"member_id": member_id, "segment": result}
 
