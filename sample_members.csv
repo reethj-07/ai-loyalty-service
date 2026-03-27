@@ -1,0 +1,6 @@
+email,first_name,last_name,mobile,tier,points_balance,status
+john.doe@example.com,John,Doe,+1234567890,Gold,2500,active
+jane.smith@example.com,Jane,Smith,+0987654321,Platinum,5000,active
+bob.jones@example.com,Bob,Jones,+1122334455,Silver,1200,active
+alice.brown@example.com,Alice,Brown,+5566778899,Bronze,500,inactive
+charlie.davis@example.com,Charlie,Davis,+9988776655,Gold,3200,active

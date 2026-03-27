@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Enterprise SaaS Design System */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar - Dark Navy (matching original) */
+    --sidebar-background: 220 26% 14%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 26% 20%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 220 26% 20%;
+    --sidebar-ring: 217 91% 60%;
+    --sidebar-muted: 215 20% 55%;
+
+    /* Behavior Badge Colors */
+    --badge-inactivity: 38 92% 50%;
+    --badge-inactivity-foreground: 38 92% 20%;
+    --badge-high-value: 217 91% 60%;
+    --badge-high-value-foreground: 0 0% 100%;
+    --badge-purchase: 160 84% 39%;
+    --badge-purchase-foreground: 0 0% 100%;
+    --badge-new-purchase: 262 83% 58%;
+    --badge-new-purchase-foreground: 0 0% 100%;
+
+    /* ROI Positive */
+    --roi-positive: 160 84% 39%;
+
+    /* Live Badge */
+    --live: 160 84% 39%;
+    --live-foreground: 0 0% 100%;
+
+    /* Gold Tier */
+    --gold: 45 93% 47%;
+    --gold-foreground: 45 93% 20%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 212 27% 84%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 15%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer components {
+  /* Login Card */
+  .login-card {
+    @apply bg-card rounded-xl shadow-lg border border-border/50 p-8;
+  }
+
+  /* Sidebar styling */
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+  }
+
+  .sidebar-nav-item.active {
+    @apply bg-blue-50 text-primary border-l-2 border-primary;
+  }
+
+  .sidebar-section-label {
+    @apply text-xs font-semibold uppercase tracking-wider px-3 py-2 text-gray-400;
+  }
+
+  /* Data tables */
+  .data-table {
+    @apply w-full;
+  }
+
+  .data-table th {
+    @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wider py-3 px-4 border-b;
+  }
+
+  .data-table td {
+    @apply py-4 px-4 text-sm border-b border-border/50;
+  }
+
+  .data-table tr:hover {
+    @apply bg-muted/30;
+  }
+
+  /* Behavior Badges */
+  .badge-behavior {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-inactivity {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .badge-high-value {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .badge-purchase {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .badge-new-purchase {
+    @apply bg-violet-100 text-violet-800;
+  }
+
+  /* Status Badges */
+  .badge-live {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700;
+  }
+
+  .badge-gold {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800;
+  }
+
+  /* KPI Cards */
+  .kpi-card {
+    @apply bg-card rounded-lg border border-border/50 p-6;
+  }
+
+  .kpi-value {
+    @apply text-3xl font-bold text-foreground;
+  }
+
+  .kpi-label {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wider;
+  }
+
+  .kpi-positive {
+    @apply text-sm text-emerald-600 font-medium;
+  }
+
+  /* AI Recommendation Banner */
+  .ai-recommendation {
+    @apply bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3;
+  }
+
+  /* Modal Overlay */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center;
+  }
+
+  /* Page Header */
+  .page-header {
+    @apply mb-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold text-foreground;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  /* ROI Display */
+  .roi-positive {
+    @apply text-emerald-600 font-medium flex items-center gap-1;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    @apply flex items-center gap-2 text-sm text-muted-foreground;
+  }
+
+  .breadcrumb a {
+    @apply hover:text-foreground transition-colors;
+  }
+
+  .breadcrumb-separator {
+    @apply text-muted-foreground/50;
+  }
+
+  /* Top Header */
+  .top-header {
+    @apply h-16 border-b border-border bg-card flex items-center justify-between px-6;
+  }
+
+  /* Search Input */
+  .search-input {
+    @apply flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm text-muted-foreground;
+  }
+}

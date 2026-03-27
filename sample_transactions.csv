@@ -1,0 +1,8 @@
+member_id,amount,merchant,type,category
+john.doe@example.com,250.00,Nike Store,purchase,retail
+jane.smith@example.com,180.50,Amazon,purchase,online
+bob.jones@example.com,-50.00,Walmart,return,grocery
+alice.brown@example.com,15.00,Starbucks,purchase,food
+charlie.davis@example.com,420.00,Best Buy,purchase,electronics
+john.doe@example.com,75.00,Target,purchase,retail
+jane.smith@example.com,-25.00,Amazon,return,online
