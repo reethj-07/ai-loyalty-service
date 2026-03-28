@@ -342,7 +342,7 @@ class AnalysisAgent:
             }
 
         action["member_id"] = member_id
-        action["personalization"] = preferences.dict() if preferences else {}
+        action["personalization"] = preferences.model_dump() if preferences else {}
 
         return action
 

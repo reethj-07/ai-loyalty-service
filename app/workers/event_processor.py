@@ -15,9 +15,7 @@ from app.segments.detector import SegmentShiftDetector
 from app.monitoring.kpi_engine import kpi_engine
 from app.repositories.campaign_proposal_repository import campaign_proposal_repo
 from app.schemas.campaign_proposal import CampaignProposal
-from app.repositories.supabase_campaigns_repo import campaigns_repo
 from app.schemas.events import TransactionEvent
-from app.services.campaign_executor import CampaignExecutor
 from app.core.ws_manager import manager
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,6 @@ logger = logging.getLogger(__name__)
 behavior_service = BehaviorDetectorService()
 automation_engine = AutomationEngine()
 review_repo = ReviewRepository()
-campaign_executor = CampaignExecutor()
 
 member_state_store: Dict[str, MemberState] = {}
 
@@ -80,6 +77,8 @@ async def process_single_event(event: Dict):
         campaign_proposal_repo.save(campaign_proposal)
 
         if auto_approve:
+            from app.repositories.supabase_campaigns_repo import campaigns_repo
+
             created = campaigns_repo.create_campaign(
                 {
                     "name": f"AI {campaign_proposal.segment} - {campaign_proposal.campaign_type}",
@@ -96,6 +95,9 @@ async def process_single_event(event: Dict):
             )
 
             if auto_execute and created:
+                from app.services.campaign_executor import CampaignExecutor
+
+                campaign_executor = CampaignExecutor()
                 await campaign_executor.launch_campaign(
                     campaign_id=created.id,
                     campaign_data={

@@ -57,7 +57,7 @@ export default function OrderTracking() {
   }, [API_BASE]);
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Order Tracking" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Order Tracking" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Order Tracking</h1>

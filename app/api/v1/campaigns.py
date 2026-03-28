@@ -6,6 +6,7 @@ import io
 from datetime import datetime, timezone
 from app.repositories.supabase_campaigns_repo import campaigns_repo
 from app.core.tenant import resolve_tenant_id
+from app.core.auth import require_roles
 
 router = APIRouter(tags=["campaigns"])
 
@@ -61,6 +62,7 @@ def list_campaigns(tenant_id: str | None = Depends(resolve_tenant_id)):
 def create_campaign(
     request: CreateCampaignRequest,
     tenant_id: str | None = Depends(resolve_tenant_id),
+    _user: dict = Depends(require_roles("admin")),
 ):
     """Create a new campaign"""
     try:
@@ -157,6 +159,7 @@ def get_campaign(campaign_id: str, tenant_id: str | None = Depends(resolve_tenan
 async def bulk_create_campaigns(
     file: UploadFile = File(...),
     tenant_id: str | None = Depends(resolve_tenant_id),
+    _user: dict = Depends(require_roles("admin")),
 ):
     """Bulk import campaigns from CSV file"""
     if not file.filename.endswith('.csv'):

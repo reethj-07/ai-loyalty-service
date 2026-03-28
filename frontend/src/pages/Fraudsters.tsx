@@ -39,7 +39,7 @@ export default function Fraudsters() {
   }, [API_BASE]);
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Fraudsters" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Fraudsters" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Fraudsters</h1>

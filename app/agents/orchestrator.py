@@ -30,6 +30,37 @@ class LoyaltyAgentOrchestrator:
     Uses LLM for reasoning and coordinates tool use, memory, and decision-making
     """
 
+    ACTION_POLICIES = {
+        "launch_campaign": {
+            "owner": "execution_agent",
+            "allowed_tools": {"analyze_segment", "predict_roi", "check_budget", "execute_campaign"},
+        },
+        "analyze": {
+            "owner": "analysis_agent",
+            "allowed_tools": {"analyze_segment", "analyze_campaign_performance", "detect_trends", "get_member_data"},
+        },
+        "create_ab_test": {
+            "owner": "execution_agent",
+            "allowed_tools": {"create_ab_test", "analyze_campaign_performance"},
+        },
+        "optimize": {
+            "owner": "strategy_agent",
+            "allowed_tools": {"analyze_campaign_performance", "predict_roi", "generate_message"},
+        },
+        "risk_assess": {
+            "owner": "risk_agent",
+            "allowed_tools": {"get_member_data", "analyze_segment"},
+        },
+    }
+
+    ACTION_ALIASES = {
+        "launch_proven_campaign": "launch_campaign",
+        "launch_new_campaign": "launch_campaign",
+        "segment_analysis": "analyze",
+        "a_b_test_small": "create_ab_test",
+        "a_b_test_large": "create_ab_test",
+    }
+
     def __init__(self):
         self.memory: AgentMemory = get_agent_memory()
         self.decision_framework: AutonomousDecisionFramework = get_decision_framework()
@@ -327,10 +358,23 @@ Provide your strategic plan now:"""
 
         decisions = []
 
-        for action in plan.get("recommended_actions", []):
+        for raw_action in plan.get("recommended_actions", []):
+            action = dict(raw_action)
+            raw_action_type = str(action.get("action_type", "")).strip() or "analyze"
+            action_type = self._canonical_action_type(raw_action_type)
+            action["action_type"] = action_type
+            action["raw_action_type"] = raw_action_type
+
+            if not isinstance(action.get("parameters"), dict):
+                action["parameters"] = {}
+
+            estimated_budget = action.get("estimated_budget")
+            if estimated_budget is not None and "budget" not in action["parameters"]:
+                action["parameters"]["budget"] = estimated_budget
+
             # Evaluate through decision framework
             decision = await self.decision_framework.evaluate_decision(
-                action_type=action.get("action_type", "unknown"),
+                action_type=action_type,
                 parameters=action.get("parameters", {}),
                 agent_confidence=action.get("confidence", 0.5),
                 estimated_impact={
@@ -341,13 +385,15 @@ Provide your strategic plan now:"""
 
             decisions.append({
                 "action": action,
-                "decision": decision.dict(),
-                "will_execute": decision.auto_approved
+                "decision": decision.model_dump(),
+                "will_execute": decision.auto_approved,
+                "owner": self._owner_for_action(action_type),
+                "canonical_action_type": action_type,
             })
 
             # Log decision
             autonomy_emoji = "🟢" if decision.auto_approved else "🟡" if decision.autonomy_level == AutonomyLevel.HUMAN_IN_LOOP else "🔴"
-            print(f"{autonomy_emoji} {action['action_type']}: {decision.reasoning}")
+            print(f"{autonomy_emoji} {action_type}: {decision.reasoning}")
 
         print(f"✅ Made {len(decisions)} decisions")
         return decisions
@@ -364,56 +410,186 @@ Provide your strategic plan now:"""
         for decision_item in decisions:
             action = decision_item["action"]
             decision = decision_item["decision"]
+            action_type = self._canonical_action_type(action.get("action_type", "unknown"))
+            owner = self._owner_for_action(action_type)
+            started_at = datetime.now().isoformat()
+
+            tool_validation_error = self._validate_action_tool_sequence(action)
+            if tool_validation_error:
+                results.append({
+                    "action": action,
+                    "error": tool_validation_error,
+                    "status": "failed_validation",
+                    "orchestration": {
+                        "owner": owner,
+                        "action_type": action_type,
+                        "started_at": started_at,
+                    },
+                })
+                self.action_history.append(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "action": action,
+                        "decision": decision,
+                        "status": "failed_validation",
+                        "error": tool_validation_error,
+                        "owner": owner,
+                        "canonical_action_type": action_type,
+                    }
+                )
+                continue
 
             if decision_item["will_execute"]:
                 # Execute autonomously
                 try:
+                    await self.comm_bus.send_message(
+                        from_agent="orchestrator",
+                        to_agent=self._owner_for_action(action_type),
+                        message_type=MessageType.REQUEST,
+                        subject=f"Execute action: {action_type}",
+                        content={"action": action, "decision": decision},
+                    )
+
                     result = await self._execute_action(action)
                     results.append({
                         "action": action,
                         "result": result,
                         "status": "executed",
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
+                        "orchestration": {
+                            "owner": owner,
+                            "action_type": action_type,
+                            "started_at": started_at,
+                            "completed_at": datetime.now().isoformat(),
+                            "fallback_used": bool(result.get("fallback", False)) if isinstance(result, dict) else False,
+                        },
                     })
-                    print(f"✅ Executed: {action['action_type']}")
+                    self.action_history.append(
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "action": action,
+                            "decision": decision,
+                            "status": "executed",
+                            "result": result,
+                            "owner": owner,
+                            "canonical_action_type": action_type,
+                        }
+                    )
+                    print(f"✅ Executed: {action_type}")
 
                 except Exception as e:
                     print(f"❌ Execution failed: {e}")
                     results.append({
                         "action": action,
                         "error": str(e),
-                        "status": "failed"
+                        "status": "failed",
+                        "orchestration": {
+                            "owner": owner,
+                            "action_type": action_type,
+                            "started_at": started_at,
+                            "completed_at": datetime.now().isoformat(),
+                        },
                     })
+                    self.action_history.append(
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "action": action,
+                            "decision": decision,
+                            "status": "failed",
+                            "error": str(e),
+                            "owner": owner,
+                            "canonical_action_type": action_type,
+                        }
+                    )
 
             else:
                 # Queue for human review
                 await self._queue_for_human_review(action, decision)
                 results.append({
                     "action": action,
-                    "status": "queued_for_review"
+                    "status": "queued_for_review",
+                    "orchestration": {
+                        "owner": owner,
+                        "action_type": action_type,
+                        "started_at": started_at,
+                        "completed_at": datetime.now().isoformat(),
+                    },
                 })
-                print(f"📋 Queued for review: {action['action_type']}")
+                self.action_history.append(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "action": action,
+                        "decision": decision,
+                        "status": "queued_for_review",
+                        "owner": owner,
+                        "canonical_action_type": action_type,
+                    }
+                )
+                print(f"📋 Queued for review: {action_type}")
 
         print(f"✅ Processed {len(results)} actions")
         return results
 
     async def _execute_action(self, action: Dict) -> Dict:
         """Execute a specific action using tools"""
-        action_type = action.get("action_type")
+        action_type = self._canonical_action_type(action.get("action_type"))
         parameters = action.get("parameters", {})
 
         # Map action types to tool executions
         if action_type == "launch_campaign":
-            return await self.toolkit.execute_tool(
-                "execute_campaign",
-                {
-                    "campaign_config": parameters,
-                    "segment": parameters.get("segment"),
-                    "channel": parameters.get("channel", "email")
+            try:
+                objective = parameters.get("campaign_type", "retention")
+                constraints = {
+                    "budget": parameters.get("budget", 0.0),
+                    "preferred_channel": parameters.get("channel", "email"),
                 }
-            )
+
+                strategy = await self.strategy_agent.design_campaign_strategy(
+                    objective=objective,
+                    segment=parameters.get("segment", "general"),
+                    constraints=constraints,
+                )
+                strategy["segment"] = parameters.get("segment", strategy.get("segment", "general"))
+                strategy["budget"] = constraints["budget"]
+
+                risk_assessment = await self.risk_agent.assess_campaign_risk(strategy)
+                compliance = await self.risk_agent.validate_compliance(strategy)
+
+                if risk_assessment.get("requires_human_approval"):
+                    raise PermissionError("Risk assessment requires human approval")
+
+                if not compliance.get("is_compliant", False):
+                    raise PermissionError("Compliance validation failed")
+
+                execution_result = await self.execution_agent.execute_campaign(strategy=strategy, approved=True)
+                return {
+                    "strategy": strategy,
+                    "risk": risk_assessment,
+                    "compliance": compliance,
+                    "execution": execution_result,
+                    "campaign_id": execution_result.get("campaign_id"),
+                }
+            except PermissionError:
+                raise
+            except Exception:
+                fallback = await self.toolkit.execute_tool(
+                    "execute_campaign",
+                    {
+                        "campaign_config": parameters,
+                        "segment": parameters.get("segment"),
+                        "channel": parameters.get("channel", "email")
+                    }
+                )
+                return {
+                    "execution": fallback.data if fallback.success else {},
+                    "campaign_id": (fallback.data or {}).get("campaign_id") if fallback.success else None,
+                    "fallback": True,
+                }
 
         elif action_type == "analyze":
+            campaign_id = parameters.get("campaign_id")
+            if campaign_id:
+                return await self.analysis_agent.analyze_campaign_cohort(campaign_id)
             return await self.toolkit.execute_tool(
                 "analyze_segment",
                 parameters
@@ -425,8 +601,60 @@ Provide your strategic plan now:"""
                 parameters
             )
 
+        elif action_type == "optimize":
+            campaign_id = parameters.get("campaign_id")
+            current_performance = parameters.get("current_performance", {})
+            if not campaign_id:
+                raise ValueError("optimize action requires campaign_id")
+            return await self.strategy_agent.optimize_existing_strategy(campaign_id, current_performance)
+
+        elif action_type == "risk_assess":
+            return await self.risk_agent.assess_campaign_risk(parameters)
+
         else:
-            return {"status": "unknown_action_type", "action": action_type}
+            raise ValueError(f"Unknown or unsupported action_type: {action_type}")
+
+    def _canonical_action_type(self, action_type: Optional[str]) -> str:
+        raw = str(action_type or "").strip()
+        if not raw:
+            return ""
+        return self.ACTION_ALIASES.get(raw, raw)
+
+    def _owner_for_action(self, action_type: str) -> str:
+        canonical_action = self._canonical_action_type(action_type)
+        policy = self.ACTION_POLICIES.get(canonical_action, {})
+        return str(policy.get("owner", "orchestrator"))
+
+    def _validate_action_tool_sequence(self, action: Dict[str, Any]) -> Optional[str]:
+        action_type = self._canonical_action_type(action.get("action_type"))
+        if not action_type:
+            return "Missing action_type"
+
+        policy = self.ACTION_POLICIES.get(action_type)
+        if not policy:
+            return None
+
+        requested_owner = str(action.get("owner", "")).strip()
+        expected_owner = str(policy.get("owner", "orchestrator"))
+        if requested_owner and requested_owner != expected_owner:
+            return (
+                f"Action '{action_type}' must be owned by '{expected_owner}', "
+                f"but got '{requested_owner}'"
+            )
+
+        sequence = action.get("tool_sequence") or []
+        if not sequence:
+            return None
+
+        allowed = set(policy.get("allowed_tools", set()))
+        invalid = [tool for tool in sequence if tool not in allowed]
+        if invalid:
+            return (
+                f"Action '{action_type}' requested unauthorized tools: {invalid}. "
+                f"Allowed tools: {sorted(allowed)}"
+            )
+
+        return None
 
     async def _queue_for_human_review(self, action: Dict, decision: Dict):
         """Queue action for human review"""
@@ -462,8 +690,13 @@ Provide your strategic plan now:"""
                 action = result["action"]
 
                 # Store in memory
+                payload = result.get("result", {})
+                campaign_id = payload.get("campaign_id")
+                if not campaign_id and isinstance(payload.get("execution"), dict):
+                    campaign_id = payload["execution"].get("campaign_id")
+
                 await self.memory.store_campaign_outcome(
-                    campaign_id=result.get("result", {}).get("campaign_id", "unknown"),
+                    campaign_id=campaign_id or "unknown",
                     strategy=action.get("action_type", "unknown"),
                     segment=action.get("parameters", {}).get("segment", "general"),
                     channel=action.get("parameters", {}).get("channel", "email"),

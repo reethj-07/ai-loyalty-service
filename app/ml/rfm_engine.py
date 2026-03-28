@@ -67,9 +67,23 @@ class RFMEngine:
 
         out = df.copy()
 
-        out["R_score"] = self._safe_qcut_rank(out["recency_days"], reverse=True)
-        out["F_score"] = self._safe_qcut_rank(out["frequency_90d"], reverse=False)
-        out["M_score"] = self._safe_qcut_rank(out["monetary_90d"], reverse=False)
+        def should_use_quintiles(series: pd.Series) -> bool:
+            return len(out) >= 5 and series.nunique() > 1
+
+        if should_use_quintiles(out["recency_days"]):
+            out["R_score"] = self._safe_qcut_rank(out["recency_days"], reverse=True)
+        else:
+            out["R_score"] = out["recency_days"].apply(self._score_recency_by_thresholds).astype(int)
+
+        if should_use_quintiles(out["frequency_90d"]):
+            out["F_score"] = self._safe_qcut_rank(out["frequency_90d"], reverse=False)
+        else:
+            out["F_score"] = out["frequency_90d"].apply(self._score_frequency_by_thresholds).astype(int)
+
+        if should_use_quintiles(out["monetary_90d"]):
+            out["M_score"] = self._safe_qcut_rank(out["monetary_90d"], reverse=False)
+        else:
+            out["M_score"] = out["monetary_90d"].apply(self._score_monetary_by_thresholds).astype(int)
 
         out["rfm_score"] = (
             0.3 * out["R_score"] + 0.3 * out["F_score"] + 0.4 * out["M_score"]
@@ -118,3 +132,39 @@ class RFMEngine:
             scored = (scored / bins * 5).round().clip(1, 5).astype(int)
 
         return scored
+
+    @staticmethod
+    def _score_recency_by_thresholds(recency_days: float) -> int:
+        if recency_days <= 7:
+            return 5
+        if recency_days <= 30:
+            return 4
+        if recency_days <= 60:
+            return 3
+        if recency_days <= 120:
+            return 2
+        return 1
+
+    @staticmethod
+    def _score_frequency_by_thresholds(frequency_90d: float) -> int:
+        if frequency_90d >= 12:
+            return 5
+        if frequency_90d >= 8:
+            return 4
+        if frequency_90d >= 4:
+            return 3
+        if frequency_90d >= 2:
+            return 2
+        return 1
+
+    @staticmethod
+    def _score_monetary_by_thresholds(monetary_90d: float) -> int:
+        if monetary_90d >= 2000:
+            return 5
+        if monetary_90d >= 1000:
+            return 4
+        if monetary_90d >= 500:
+            return 3
+        if monetary_90d >= 100:
+            return 2
+        return 1

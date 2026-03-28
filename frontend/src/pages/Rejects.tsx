@@ -41,7 +41,7 @@ export default function Rejects() {
   }, [API_BASE]);
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Rejects" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Rejects" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Rejects</h1>

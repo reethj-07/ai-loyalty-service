@@ -4,53 +4,51 @@
 
 @layer base {
   :root {
-    /* Enterprise SaaS Design System */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    --background: 225 30% 8%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 228 26% 12%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 228 26% 12%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 260 90% 68%;
+    --primary-foreground: 255 100% 99%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 226 22% 16%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 226 22% 16%;
+    --muted-foreground: 219 15% 68%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 190 89% 60%;
+    --accent-foreground: 225 30% 8%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 82% 63%;
+    --destructive-foreground: 0 0% 98%;
 
-    --success: 160 84% 39%;
+    --success: 149 78% 45%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --border: 227 18% 24%;
+    --input: 227 18% 24%;
+    --ring: 260 90% 68%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Sidebar - Dark Navy (matching original) */
-    --sidebar-background: 220 26% 14%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 26% 20%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 220 26% 20%;
-    --sidebar-ring: 217 91% 60%;
-    --sidebar-muted: 215 20% 55%;
+    --sidebar-background: 228 33% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 260 90% 68%;
+    --sidebar-primary-foreground: 255 100% 99%;
+    --sidebar-accent: 229 27% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 229 20% 21%;
+    --sidebar-ring: 260 90% 68%;
+    --sidebar-muted: 219 14% 64%;
 
     /* Behavior Badge Colors */
     --badge-inactivity: 38 92% 50%;
@@ -75,33 +73,33 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 225 30% 8%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+    --card: 228 26% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 228 26% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
+    --primary: 260 90% 68%;
+    --primary-foreground: 255 100% 99%;
+    --secondary: 226 22% 16%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 212 27% 84%;
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 15%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 217 91% 60%;
+    --muted: 226 22% 16%;
+    --muted-foreground: 219 15% 68%;
+    --accent: 190 89% 60%;
+    --accent-foreground: 225 30% 8%;
+    --destructive: 0 82% 63%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 227 18% 24%;
+    --input: 227 18% 24%;
+    --ring: 260 90% 68%;
+    --sidebar-background: 228 33% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 260 90% 68%;
+    --sidebar-primary-foreground: 255 100% 99%;
+    --sidebar-accent: 229 27% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 229 20% 21%;
+    --sidebar-ring: 260 90% 68%;
   }
 }
 
@@ -113,26 +111,28 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-image: radial-gradient(circle at 0% 0%, hsl(var(--primary) / 0.2), transparent 35%), radial-gradient(circle at 100% 100%, hsl(var(--accent) / 0.13), transparent 35%);
+    background-attachment: fixed;
   }
 }
 
 @layer components {
   /* Login Card */
   .login-card {
-    @apply bg-card rounded-xl shadow-lg border border-border/50 p-8;
+    @apply bg-card rounded-xl shadow-xl border border-border/50 p-8;
   }
 
   /* Sidebar styling */
   .sidebar-nav-item {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground;
   }
 
   .sidebar-nav-item.active {
-    @apply bg-blue-50 text-primary border-l-2 border-primary;
+    @apply bg-sidebar-accent text-sidebar-foreground border border-sidebar-border/70 shadow-sm;
   }
 
   .sidebar-section-label {
-    @apply text-xs font-semibold uppercase tracking-wider px-3 py-2 text-gray-400;
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] px-3 py-2 text-sidebar-muted;
   }
 
   /* Data tables */
@@ -242,7 +242,7 @@
 
   /* Top Header */
   .top-header {
-    @apply h-16 border-b border-border bg-card flex items-center justify-between px-6;
+    @apply h-16 border-b border-border/70 bg-background/70 backdrop-blur-md flex items-center justify-between px-5 lg:px-8;
   }
 
   /* Search Input */

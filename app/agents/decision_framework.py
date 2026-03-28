@@ -48,10 +48,12 @@ class AutonomousDecisionFramework:
             "max_budget": 500.0,
             "max_risk_score": 0.3,
             "allowed_actions": [
+                "launch_campaign",
                 "launch_proven_campaign",
                 "adjust_campaign_timing",
                 "optimize_message",
                 "segment_analysis",
+                "analyze",
                 "a_b_test_small"
             ],
             "segment_restrictions": None,  # Any segment
@@ -61,10 +63,13 @@ class AutonomousDecisionFramework:
             "max_budget": 5000.0,
             "max_risk_score": 0.7,
             "allowed_actions": [
+                "launch_campaign",
                 "launch_new_campaign",
                 "create_new_segment",
                 "major_strategy_change",
                 "budget_reallocation",
+                "create_ab_test",
+                "optimize",
                 "a_b_test_large"
             ],
             "segment_restrictions": ["high_value", "vip", "at_risk"],
@@ -82,6 +87,14 @@ class AutonomousDecisionFramework:
             "segment_restrictions": None,
             "min_confidence": 0.0
         }
+    }
+
+    ACTION_ALIASES = {
+        "launch_proven_campaign": "launch_campaign",
+        "launch_new_campaign": "launch_campaign",
+        "segment_analysis": "analyze",
+        "a_b_test_small": "create_ab_test",
+        "a_b_test_large": "create_ab_test",
     }
 
     def __init__(self):
@@ -106,9 +119,11 @@ class AutonomousDecisionFramework:
         Returns:
             Decision object with autonomy level and approval status
         """
+        canonical_action = self.ACTION_ALIASES.get(action_type, action_type)
+
         # Calculate risk level
         risk_level = await self._assess_risk(
-            action_type, parameters, estimated_impact
+            canonical_action, parameters, estimated_impact
         )
 
         # Determine autonomy level
@@ -198,22 +213,31 @@ class AutonomousDecisionFramework:
 
         # Start with most restrictive and relax if criteria met
 
+        canonical_action = self.ACTION_ALIASES.get(action_type, action_type)
+
         # Check FULL_AUTO eligibility
         config = self.AUTONOMY_CONFIG[AutonomyLevel.FULL_AUTO]
         if (
             budget <= config["max_budget"] and
             risk_level in [RiskLevel.LOW] and
             confidence >= config["min_confidence"] and
-            action_type in config["allowed_actions"]
+            canonical_action in config["allowed_actions"]
         ):
             return AutonomyLevel.FULL_AUTO
 
         # Check HUMAN_IN_LOOP eligibility
         config = self.AUTONOMY_CONFIG[AutonomyLevel.HUMAN_IN_LOOP]
+        segment_allowed = (
+            config["segment_restrictions"] is None
+            or segment is None
+            or segment in config["segment_restrictions"]
+        )
         if (
             budget <= config["max_budget"] and
             risk_level in [RiskLevel.LOW, RiskLevel.MEDIUM] and
-            confidence >= config["min_confidence"]
+            confidence >= config["min_confidence"] and
+            segment_allowed and
+            canonical_action in config["allowed_actions"]
         ):
             return AutonomyLevel.HUMAN_IN_LOOP
 

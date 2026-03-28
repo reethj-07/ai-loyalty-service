@@ -7,6 +7,7 @@ from app.repositories.supabase_campaigns_repo import campaigns_repo
 from app.services.human_review_service import HumanReviewService
 from app.services.campaign_executor import CampaignExecutor
 from app.core.tenant import resolve_tenant_id
+from app.core.auth import require_roles
 
 router = APIRouter(prefix="/review", tags=["human-review"])
 
@@ -35,6 +36,7 @@ async def approve(
     proposal_id: str,
     notes: str | None = None,
     tenant_id: str | None = Depends(resolve_tenant_id),
+    _user: dict = Depends(require_roles("admin")),
 ):
     proposal = campaign_proposal_repo.get(proposal_id)
     if not proposal:
@@ -82,7 +84,11 @@ async def approve(
 
 
 @router.post("/{proposal_id}/reject")
-def reject(proposal_id: str, request: RejectRequest):
+def reject(
+    proposal_id: str,
+    request: RejectRequest,
+    _user: dict = Depends(require_roles("admin")),
+):
     proposal = campaign_proposal_repo.get(proposal_id)
     if not proposal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
@@ -90,7 +96,12 @@ def reject(proposal_id: str, request: RejectRequest):
 
 
 @router.post("/{proposal_id}/modify")
-def modify(proposal_id: str, updates: dict, notes: str | None = None):
+def modify(
+    proposal_id: str,
+    updates: dict,
+    notes: str | None = None,
+    _user: dict = Depends(require_roles("admin")),
+):
     proposal = campaign_proposal_repo.get(proposal_id)
     if not proposal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")

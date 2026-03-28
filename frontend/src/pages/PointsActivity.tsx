@@ -58,7 +58,7 @@ export default function PointsActivity() {
   }, [members]);
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Points Activity" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Points Activity" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Points Activity</h1>

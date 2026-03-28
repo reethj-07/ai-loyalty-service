@@ -15,8 +15,23 @@ export function useSSEStream(url: string) {
     return `${(base || "http://localhost:8000").replace(/\/$/, "")}${url}`;
   }, [url]);
 
+  const streamUrl = useMemo(() => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token || token.startsWith("demo-token-")) {
+        return resolvedUrl;
+      }
+
+      const parsed = new URL(resolvedUrl);
+      parsed.searchParams.set("access_token", token);
+      return parsed.toString();
+    } catch {
+      return resolvedUrl;
+    }
+  }, [resolvedUrl]);
+
   useEffect(() => {
-    const source = new EventSource(resolvedUrl);
+    const source = new EventSource(streamUrl);
     setStatus("connecting");
 
     source.onopen = () => setStatus("open");
@@ -43,7 +58,7 @@ export function useSSEStream(url: string) {
       source.close();
       setStatus("closed");
     };
-  }, [resolvedUrl]);
+  }, [streamUrl]);
 
   return { events, status };
 }

@@ -83,7 +83,7 @@ export default function RequestsTracking() {
   };
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Requests Tracking" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Requests Tracking" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Requests Tracking</h1>

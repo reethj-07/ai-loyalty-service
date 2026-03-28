@@ -17,8 +17,9 @@ export function useWebSocket(channel: string): UseWebSocketResult {
 
   const wsUrl = useMemo(() => {
     const base = import.meta.env.VITE_API_BASE_URL as string;
-    const normalized = (base || "http://localhost:8000/api/v1/realtime").replace(/\/$/, "");
-    return `${normalized.replace("http://", "ws://").replace("https://", "wss://")}/ws/${channel}`;
+    const normalizedBase = (base || "http://localhost:8000").replace(/\/$/, "");
+    const wsBase = normalizedBase.replace("http://", "ws://").replace("https://", "wss://");
+    return `${wsBase}/api/v1/realtime/ws/${channel}`;
   }, [channel]);
 
   useEffect(() => {

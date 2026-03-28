@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
     signup: `${API_BASE_URL}/api/v1/auth/signup`,
     signout: `${API_BASE_URL}/api/v1/auth/signout`,
     refresh: `${API_BASE_URL}/api/v1/auth/refresh`,
+    forgotPassword: `${API_BASE_URL}/api/v1/auth/forgot-password`,
     me: `${API_BASE_URL}/api/v1/auth/me`,
   },
   members: `${API_BASE_URL}/api/v1/members`,

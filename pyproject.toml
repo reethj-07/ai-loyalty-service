@@ -48,3 +48,6 @@ ignore_errors = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+filterwarnings = [
+	"ignore:The `gotrue` package is deprecated.*:DeprecationWarning",
+]

@@ -181,7 +181,7 @@ export default function Transactions() {
     <DashboardLayout
       breadcrumbs={[
         { label: "Home", href: "/" },
-        { label: "Loyalty", href: "/" },
+        { label: "Growth", href: "/" },
         { label: "Transactions" },
       ]}
     >

@@ -363,7 +363,7 @@ export default function Members() {
   };
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Members" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Members" }]}>
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="page-title">Members ({totalMembers})</h1>
@@ -543,7 +543,7 @@ export default function Members() {
             <DialogDescription>
               {editingMember
                 ? "Update member information. Required fields are marked with an asterisk."
-                : "Create a new loyalty program member. Required fields are marked with an asterisk."}
+                : "Create a new growth program member. Required fields are marked with an asterisk."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">

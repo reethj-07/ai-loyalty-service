@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 from typing import Optional
 
@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")
     supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+    supabase_jwt_secret: Optional[str] = os.getenv("SUPABASE_JWT_SECRET", None)
     
     # Optional Services
     redis_url: Optional[str] = os.getenv("REDIS_URL", None)
@@ -26,9 +27,11 @@ class Settings(BaseSettings):
     enable_email: bool = sendgrid_api_key is not None
     enable_ai: bool = anthropic_api_key is not None
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
     
     def __init__(self, **data):
         super().__init__(**data)

@@ -4,7 +4,7 @@ Provides tools that agents can use to interact with the system
 Similar to Claude Code's tool system - agent decides which tools to use and when
 """
 from typing import Dict, Any, List, Optional, Callable
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime, timedelta
 import json
 
@@ -24,8 +24,7 @@ class Tool(BaseModel):
     parameters: Dict[str, Any]
     function: Any = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class AgentToolkit:

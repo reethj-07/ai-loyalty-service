@@ -10,7 +10,7 @@ export default function PlaceholderPage() {
     .join(" ");
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: formattedName }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: formattedName }]}>
       <div className="flex flex-col items-center justify-center h-[60vh]">
         <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mb-4">
           <span className="text-2xl">🚧</span>

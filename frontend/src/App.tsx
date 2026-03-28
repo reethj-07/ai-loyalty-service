@@ -34,18 +34,18 @@ const App = () => (
       <AuthProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             {/* Login */}
             <Route path="/login" element={<Login />} />
 
-            {/* Default redirect to login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Default entry */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             {/* Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-            {/* Loyalty Overview - Protected */}
+            {/* Growth Operations - Protected */}
             <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
             <Route path="/points-activity" element={<ProtectedRoute><PointsActivity /></ProtectedRoute>} />

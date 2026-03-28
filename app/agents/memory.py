@@ -277,12 +277,12 @@ class AgentMemory:
     async def export_memory(self) -> Dict:
         """Export memory for persistence"""
         return {
-            "campaign_history": [c.dict() for c in self.campaign_history],
+            "campaign_history": [c.model_dump() for c in self.campaign_history],
             "member_preferences": {
-                k: v.dict() for k, v in self.member_preferences.items()
+                k: v.model_dump() for k, v in self.member_preferences.items()
             },
             "strategy_outcomes": {
-                k: v.dict() for k, v in self.strategy_outcomes.items()
+                k: v.model_dump() for k, v in self.strategy_outcomes.items()
             },
             "ongoing_experiments": self.ongoing_experiments,
             "discovered_patterns": self.discovered_patterns

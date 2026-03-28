@@ -401,11 +401,23 @@ class LoyaltyAgentGraphService:
     def __init__(self):
         self.graph = build_loyalty_agent_graph()
 
+    @staticmethod
+    def _graph_config() -> Dict[str, Any]:
+        return {
+            "configurable": {
+                "thread_id": f"agent-{int(time.time() * 1000)}"
+            }
+        }
+
     async def ainvoke(self, state: LoyaltyAgentState) -> LoyaltyAgentState:
-        return await self.graph.ainvoke(state)
+        return await self.graph.ainvoke(state, config=self._graph_config())
 
     async def astream_node_updates(self, state: LoyaltyAgentState) -> AsyncGenerator[Dict[str, Any], None]:
-        async for chunk in self.graph.astream(state, stream_mode="updates"):
+        async for chunk in self.graph.astream(
+            state,
+            config=self._graph_config(),
+            stream_mode="updates",
+        ):
             if isinstance(chunk, dict):
                 for node_name, node_output in chunk.items():
                     yield {

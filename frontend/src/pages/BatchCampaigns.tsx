@@ -222,7 +222,7 @@ export default function BatchCampaigns() {
   };
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Campaigns" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Campaigns" }]}>
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="page-title">Batch Campaigns ({campaignsData.length})</h1>
@@ -324,7 +324,7 @@ export default function BatchCampaigns() {
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Q1 Loyalty Boost"
+                  placeholder="e.g., Q1 Growth Acceleration"
                   required
                 />
               </div>

@@ -76,7 +76,7 @@ export default function PointsTransfer() {
   };
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Points Transfer" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Points Transfer" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Points Transfer</h1>

@@ -75,7 +75,8 @@ class AuthService:
 
         user_id = payload.get("sub")
         email = payload.get("email")
-        role = payload.get("role", "authenticated")
+        user_metadata = payload.get("user_metadata") or {}
+        role = user_metadata.get("role") or payload.get("role", "authenticated")
 
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token payload")
@@ -84,6 +85,7 @@ class AuthService:
             "id": user_id,
             "email": email,
             "role": role,
+            "user_metadata": user_metadata,
             "metadata": payload
         }
 
@@ -225,6 +227,31 @@ class AuthService:
         except Exception as e:
             raise HTTPException(status_code=401, detail=str(e))
 
+    async def request_password_reset(self, email: str) -> dict:
+        """
+        Request password reset email via Supabase Auth.
+
+        Args:
+            email: User email address
+
+        Returns:
+            dict: Success message
+        """
+        try:
+            if hasattr(supabase.auth, "reset_password_email"):
+                supabase.auth.reset_password_email(email)
+            elif hasattr(supabase.auth, "reset_password_for_email"):
+                supabase.auth.reset_password_for_email(email)
+            else:
+                raise HTTPException(status_code=501, detail="Password reset is not supported by current auth client")
+
+            return {"message": "If an account exists for this email, a reset link has been sent."}
+        except HTTPException:
+            raise
+        except Exception:
+            # Deliberately return generic success to avoid account enumeration
+            return {"message": "If an account exists for this email, a reset link has been sent."}
+
 
 # Singleton instance
 auth_service = AuthService()
@@ -262,3 +289,16 @@ async def get_current_user_optional(
         return await auth_service.get_current_user(credentials.credentials)
     except HTTPException:
         return None
+
+
+def require_roles(*allowed_roles: str):
+    """Dependency factory to enforce role-based access control."""
+    normalized_allowed = {role.lower() for role in allowed_roles if role}
+
+    async def _role_guard(user: dict = Depends(get_current_user)) -> dict:
+        role = str(user.get("role", "")).lower()
+        if role not in normalized_allowed:
+            raise HTTPException(status_code=403, detail="Forbidden: insufficient role")
+        return user
+
+    return _role_guard

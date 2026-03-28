@@ -50,7 +50,7 @@ export default function CommunicationLogs() {
   }, [API_BASE]);
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Loyalty", href: "/" }, { label: "Communication Logs" }]}>
+    <DashboardLayout breadcrumbs={[{ label: "Home", href: "/" }, { label: "Growth", href: "/" }, { label: "Communication Logs" }]}>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="page-title">Communication Logs</h1>

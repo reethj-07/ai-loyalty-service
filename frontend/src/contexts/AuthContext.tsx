@@ -1,5 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS } from '@/lib/api';
+
+const AUTH_TOKEN_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const TOKEN_EXPIRES_AT_KEY = 'token_expires_at';
 
 interface User {
   id: string;
@@ -14,7 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
-  quickLogin: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -26,55 +30,147 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      setToken(storedToken);
-      // Check if it's a demo token
-      if (storedToken.startsWith('demo-token-')) {
-        // Demo mode - restore demo user without API call
-        const demoUser: User = {
-          id: 'demo-user',
-          email: 'manager@loyaltypro.com',
-          full_name: 'Demo Manager',
-          company: 'Loyalty Pro'
-        };
-        setUser(demoUser);
-        setIsLoading(false);
-      } else {
-        // Real token - validate with API
-        fetchCurrentUser(storedToken);
+  const parseApiError = async (response: Response, fallback: string) => {
+    try {
+      const payload = await response.json();
+      const detail = payload?.detail;
+      if (typeof detail === 'string' && detail.trim()) {
+        return detail;
       }
-    } else {
-      setIsLoading(false);
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const clearSessionState = useCallback(() => {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  const persistSessionState = useCallback((session: any) => {
+    const accessToken = session?.access_token;
+    const refreshToken = session?.refresh_token;
+    const expiresIn = Number(session?.expires_in ?? 0);
+
+    if (accessToken) {
+      setToken(accessToken);
+      localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+    }
+
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
+
+    if (Number.isFinite(expiresIn) && expiresIn > 0) {
+      localStorage.setItem(TOKEN_EXPIRES_AT_KEY, String(Date.now() + expiresIn * 1000));
     }
   }, []);
 
-  const fetchCurrentUser = async (authToken: string) => {
+  const fetchCurrentUser = useCallback(async (authToken?: string): Promise<boolean> => {
     try {
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
       const response = await fetch(API_ENDPOINTS.auth.me, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
+        credentials: 'include',
+        headers,
       });
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        setUser(data.user ?? data);
+        return true;
       } else {
-        // Token invalid, clear it
-        localStorage.removeItem('auth_token');
-        setToken(null);
+        return false;
       }
     } catch (error) {
       console.error('Failed to fetch current user:', error);
-      localStorage.removeItem('auth_token');
-      setToken(null);
-    } finally {
-      setIsLoading(false);
+      return false;
     }
-  };
+  }, []);
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+
+      const response = await fetch(API_ENDPOINTS.auth.refresh, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json().catch(() => ({}));
+      const session = data?.session;
+      if (!session?.access_token) {
+        return false;
+      }
+
+      persistSessionState(session);
+      return await fetchCurrentUser(session.access_token);
+    } catch {
+      return false;
+    }
+  }, [fetchCurrentUser, persistSessionState]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const bootstrapAuth = async () => {
+      const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (storedToken) {
+        setToken(storedToken);
+        const ok = await fetchCurrentUser(storedToken);
+        if (ok) {
+          if (mounted) setIsLoading(false);
+          return;
+        }
+      }
+
+      const cookieSessionOk = await fetchCurrentUser();
+      if (cookieSessionOk) {
+        if (mounted) setIsLoading(false);
+        return;
+      }
+
+      const refreshed = await refreshSession();
+      if (!refreshed) {
+        clearSessionState();
+      }
+
+      if (mounted) setIsLoading(false);
+    };
+
+    bootstrapAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, [clearSessionState, fetchCurrentUser, refreshSession]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearSessionState();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [clearSessionState]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -83,22 +179,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
+        const message = await parseApiError(response, 'Login failed');
+        throw new Error(message);
       }
 
       const data = await response.json();
-      const accessToken = data.session.access_token;
+      const accessToken = data?.session?.access_token;
 
-      setToken(accessToken);
-      localStorage.setItem('auth_token', accessToken);
+      if (!accessToken) {
+        throw new Error('No access token returned. Verify your account is confirmed and credentials are correct.');
+      }
+
+      persistSessionState(data.session);
 
       // Set user from signin response
-      setUser(data.user);
+      setUser(data.user ?? null);
       setIsLoading(false);
     } catch (error) {
       console.error('Login error:', error);
@@ -113,21 +213,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Signup failed');
+        const message = await parseApiError(response, 'Signup failed');
+        throw new Error(message);
       }
 
       const data = await response.json();
       const accessToken = data.session.access_token;
 
-      setToken(accessToken);
-      localStorage.setItem('auth_token', accessToken);
+      if (accessToken) {
+        persistSessionState(data.session);
+        setUser(data.user ?? null);
+      }
 
-      setUser(data.user);
       setIsLoading(false);
     } catch (error) {
       console.error('Signup error:', error);
@@ -135,39 +237,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const quickLogin = async () => {
-    // Quick demo login - sets a demo user without authentication
-    const demoToken = 'demo-token-' + Date.now();
-    const demoUser: User = {
-      id: 'demo-user',
-      email: 'manager@loyaltypro.com',
-      full_name: 'Demo Manager',
-      company: 'Loyalty Pro'
-    };
-
-    setToken(demoToken);
-    setUser(demoUser);
-    localStorage.setItem('auth_token', demoToken);
-    setIsLoading(false);
-  };
-
   const logout = async () => {
     try {
       if (token) {
         await fetch(API_ENDPOINTS.auth.signout, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Authorization': `Bearer ${token}`,
           },
+        });
+      } else {
+        await fetch(API_ENDPOINTS.auth.signout, {
+          method: 'POST',
+          credentials: 'include',
         });
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      setUser(null);
-      setToken(null);
-      localStorage.removeItem('auth_token');
+      clearSessionState();
     }
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    const response = await fetch(API_ENDPOINTS.auth.forgotPassword, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!response.ok) {
+      const message = await parseApiError(response, 'Unable to request password reset right now.');
+      throw new Error(message);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return data?.message || 'If an account exists for this email, a reset link has been sent.';
   };
 
   const value = {
@@ -176,7 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     login,
     signup,
-    quickLogin,
+    requestPasswordReset,
     logout,
     isAuthenticated: !!token && !!user,
   };

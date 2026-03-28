@@ -154,7 +154,7 @@ export default function AIIntelligenceHub() {
     <DashboardLayout
       breadcrumbs={[
         { label: "Home", href: "/" },
-        { label: "Loyalty", href: "/" },
+        { label: "Growth", href: "/" },
         { label: "AI", href: "/ai" },
       ]}
     >

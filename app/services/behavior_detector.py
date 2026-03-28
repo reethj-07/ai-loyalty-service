@@ -30,7 +30,7 @@ class BehaviorDetectorService:
                 "type": "transaction",
                 "amount": event.amount,
                 "currency": event.currency,
-                "metadata": event.metadata.dict()
+                "metadata": event.metadata.model_dump()
             }
         )
 

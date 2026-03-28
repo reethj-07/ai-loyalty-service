@@ -1,6 +1,6 @@
-# Frontend - AI Loyalty Service
+# Frontend - Asteria Growth Cloud
 
-React + TypeScript frontend for the AI Loyalty Service.
+React + TypeScript frontend for the Asteria Growth Cloud platform.
 
 ---
 
