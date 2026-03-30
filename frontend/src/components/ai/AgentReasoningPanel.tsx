@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { useSSEStream } from "@/hooks/useSSEStream";
 
 interface Props {
-  memberId: string;
+  memberId: string | null;
 }
 
 export function AgentReasoningPanel({ memberId }: Props) {
-  const { events, status } = useSSEStream(`/api/v1/ai/stream/${memberId}`);
+  const { events, status } = useSSEStream(memberId ? `/api/v1/ai/stream/${memberId}` : null);
 
   const steps = useMemo(
     () =>

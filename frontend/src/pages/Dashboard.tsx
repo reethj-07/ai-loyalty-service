@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readJson } from "@/lib/apiClient";
 import { RFMScatterChart, type RFMPoint } from "@/components/analytics/RFMScatterChart";
 import { LiveEventFeed } from "@/components/analytics/LiveEventFeed";
 import { SegmentTrendChart } from "@/components/analytics/SegmentTrendChart";
@@ -19,44 +19,59 @@ export default function Dashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const [membersRes, pendingRes, statsRes, monitorRes] = await Promise.all([
-        apiFetch(`${API_BASE}/api/v1/members?limit=200&offset=0`),
-        apiFetch(`${API_BASE}/api/v1/review/pending`),
-        apiFetch(`${API_BASE}/api/v1/segments/stats`),
-        apiFetch(`${API_BASE}/api/v1/monitoring/campaigns/active`),
-      ]);
+      try {
+        const [membersRes, pendingRes, statsRes, monitorRes] = await Promise.all([
+          apiFetch(`${API_BASE}/api/v1/members?limit=200&offset=0`),
+          apiFetch(`${API_BASE}/api/v1/review/pending`),
+          apiFetch(`${API_BASE}/api/v1/segments/stats`),
+          apiFetch(`${API_BASE}/api/v1/monitoring/campaigns/active`),
+        ]);
 
-      const members = await membersRes.json();
-      const pending = await pendingRes.json();
-      const stats = await statsRes.json();
-      const active = await monitorRes.json();
+        await Promise.all([
+          ensureOk(membersRes, "Failed to load members"),
+          ensureOk(pendingRes, "Failed to load pending reviews"),
+          ensureOk(statsRes, "Failed to load segment stats"),
+          ensureOk(monitorRes, "Failed to load active campaigns"),
+        ]);
 
-      const items = Array.isArray(members) ? members : members.items || [];
-      setMemberCount(Array.isArray(members) ? members.length : members.total || items.length);
-      setPendingProposals(Array.isArray(pending) ? pending.length : 0);
-      setCampaignsRunning(Array.isArray(active) ? active.length : 0);
+        const members = await readJson(membersRes);
+        const pending = await readJson(pendingRes);
+        const stats = await readJson(statsRes);
+        const active = await readJson(monitorRes);
 
-      const clusters = stats?.clusters || {};
-      const avgScores = Object.values(clusters).map((item: any) => Number(item.avg_rfm_score || 0));
-      const average = avgScores.length ? avgScores.reduce((a, b) => a + b, 0) / avgScores.length : 0;
-      setAvgRfm(Number(average.toFixed(2)));
+        const items = Array.isArray(members) ? members : members.items || [];
+        setMemberCount(Array.isArray(members) ? members.length : members.total || items.length);
+        setPendingProposals(Array.isArray(pending) ? pending.length : 0);
+        setCampaignsRunning(Array.isArray(active) ? active.length : 0);
 
-      const generatedScatter: RFMPoint[] = items.slice(0, 60).map((member: any, idx: number) => ({
-        memberId: member.id,
-        memberName: `${member.first_name || "Member"} ${member.last_name || ""}`.trim(),
-        segment: ["Champions", "Loyal", "At Risk", "Dormant", "New"][idx % 5],
-        frequency: (idx % 8) + 1,
-        monetary: (idx % 10) * 120 + 80,
-      }));
-      setScatterData(generatedScatter);
+        const clusters = stats?.clusters || {};
+        const avgScores = Object.values(clusters).map((item: any) => Number(item.avg_rfm_score || 0));
+        const average = avgScores.length ? avgScores.reduce((a, b) => a + b, 0) / avgScores.length : 0;
+        setAvgRfm(Number(average.toFixed(2)));
 
-      const dates = Array.from({ length: 30 }).map((_, idx) => ({
-        date: `${idx + 1}`,
-        Champions: 40 + (idx % 4),
-        Loyal: 80 + (idx % 6),
-        "At Risk": 25 + (idx % 3),
-      }));
-      setTrendData(dates);
+        const generatedScatter: RFMPoint[] = items.slice(0, 60).map((member: any, idx: number) => ({
+          memberId: member.id,
+          memberName: `${member.first_name || "Member"} ${member.last_name || ""}`.trim(),
+          segment: ["Champions", "Loyal", "At Risk", "Dormant", "New"][idx % 5],
+          frequency: (idx % 8) + 1,
+          monetary: (idx % 10) * 120 + 80,
+        }));
+        setScatterData(generatedScatter);
+
+        const dates = Array.from({ length: 30 }).map((_, idx) => ({
+          date: `${idx + 1}`,
+          Champions: 40 + (idx % 4),
+          Loyal: 80 + (idx % 6),
+          "At Risk": 25 + (idx % 3),
+        }));
+        setTrendData(dates);
+      } catch {
+        setMemberCount(0);
+        setPendingProposals(0);
+        setCampaignsRunning(0);
+        setAvgRfm(0);
+        setScatterData([]);
+      }
     };
 
     load();

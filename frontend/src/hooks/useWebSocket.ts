@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getTenantId } from "@/lib/tenant";
 
 type WebSocketMessage = Record<string, any>;
 
@@ -19,7 +20,19 @@ export function useWebSocket(channel: string): UseWebSocketResult {
     const base = import.meta.env.VITE_API_BASE_URL as string;
     const normalizedBase = (base || "http://localhost:8000").replace(/\/$/, "");
     const wsBase = normalizedBase.replace("http://", "ws://").replace("https://", "wss://");
-    return `${wsBase}/api/v1/realtime/ws/${channel}`;
+    const url = new URL(`${wsBase}/api/v1/realtime/ws/${channel}`);
+    const token = localStorage.getItem("auth_token");
+    const tenantId = getTenantId();
+
+    if (token && !token.startsWith("demo-token-")) {
+      url.searchParams.set("access_token", token);
+    }
+
+    if (tenantId) {
+      url.searchParams.set("tenant_id", tenantId);
+    }
+
+    return url.toString();
   }, [channel]);
 
   useEffect(() => {
@@ -50,9 +63,18 @@ export function useWebSocket(channel: string): UseWebSocketResult {
         if (mounted) setStatus("error");
       };
 
-      socket.onclose = () => {
+      socket.onclose = (event) => {
         if (!mounted) return;
         setStatus("closed");
+
+        // Do not reconnect endlessly when auth is invalid or channel is rejected.
+        if (event.code === 4401 || event.code === 1008 || event.code === 4403) {
+          if (event.code === 4401) {
+            window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+          }
+          return;
+        }
+
         retryRef.current += 1;
         const delay = Math.min(1000 * 2 ** retryRef.current, 15000);
         timeoutRef.current = window.setTimeout(connect, delay);

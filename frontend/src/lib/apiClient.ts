@@ -3,6 +3,8 @@
  * This utility should be used for all API calls to ensure proper auth token handling
  */
 
+import { getTenantId } from '@/lib/tenant';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const AUTH_TOKEN_KEY = 'auth_token';
@@ -11,6 +13,20 @@ const TOKEN_EXPIRES_AT_KEY = 'token_expires_at';
 
 export interface FetchOptions extends RequestInit {
   headers?: Record<string, string>;
+}
+
+async function parseErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = await response.json();
+    const detail = payload?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+  } catch {
+    // Ignore JSON parse failures and return fallback.
+  }
+
+  return fallback;
 }
 
 function clearAuthState() {
@@ -58,7 +74,7 @@ export async function apiFetch(url: string, options: FetchOptions = {}): Promise
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const tenantId = localStorage.getItem('tenant_id');
+    const tenantId = getTenantId();
     if (tenantId) {
       headers['X-Tenant-Id'] = tenantId;
     }
@@ -120,6 +136,36 @@ export async function apiCall<T = any>(url: string, options: FetchOptions = {}):
   }
   
   return response.json();
+}
+
+export async function ensureOk(response: Response, fallbackMessage?: string): Promise<Response> {
+  if (response.ok) {
+    return response;
+  }
+
+  const errorMessage = await parseErrorMessage(
+    response,
+    fallbackMessage || `Request failed with status ${response.status}`,
+  );
+  throw new Error(errorMessage);
+}
+
+export async function readJson(response: Response): Promise<any> {
+  return response.json().catch(() => ({}));
+}
+
+export async function readItemsArray(response: Response): Promise<any[]> {
+  const payload = await readJson(response);
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+
+  return [];
 }
 
 /**

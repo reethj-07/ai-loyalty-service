@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 
 interface OrderRow {
   id: string;
@@ -29,7 +29,8 @@ export default function OrderTracking() {
     const fetchOrders = async () => {
       try {
         const res = await apiFetch(`${API_BASE}/api/v1/transactions`);
-        const data = await res.json();
+        await ensureOk(res, "Failed to load order tracking");
+        const data = await readItemsArray(res);
 
         const normalized = data.map((txn: any) => ({
           id: txn.id,

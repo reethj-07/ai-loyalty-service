@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 
 interface TransactionRow {
   merchant: string;
@@ -17,7 +17,8 @@ export default function ActivityReport() {
     const fetchTransactions = async () => {
       try {
         const res = await apiFetch(`${API_BASE}/api/v1/transactions`);
-        const data = await res.json();
+        await ensureOk(res, "Failed to load activity report");
+        const data = await readItemsArray(res);
         const normalized = data.map((txn: any) => ({
           merchant: txn.merchant ?? "Unknown",
           amount: Number(txn.amount) || 0,

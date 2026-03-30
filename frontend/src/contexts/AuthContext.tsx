@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS } from '@/lib/api';
+import { clearTenantId, syncTenantFromUser } from '@/lib/tenant';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -47,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRES_AT_KEY);
+    clearTenantId();
     setToken(null);
     setUser(null);
   }, []);
@@ -84,7 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user ?? data);
+        const nextUser = data.user ?? data;
+        setUser(nextUser);
+        syncTenantFromUser(nextUser);
         return true;
       } else {
         return false;
@@ -198,7 +202,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       persistSessionState(data.session);
 
       // Set user from signin response
-      setUser(data.user ?? null);
+      const nextUser = data.user ?? null;
+      setUser(nextUser);
+      syncTenantFromUser(nextUser);
       setIsLoading(false);
     } catch (error) {
       console.error('Login error:', error);
@@ -236,7 +242,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (accessToken) {
         persistSessionState(data.session);
-        setUser(data.user ?? null);
+        const nextUser = data.user ?? null;
+        setUser(nextUser);
+        syncTenantFromUser(nextUser);
       }
 
       setIsLoading(false);

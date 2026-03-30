@@ -4,6 +4,7 @@ Provides Server-Sent Events (SSE) and channel-based WebSocket streams.
 """
 import asyncio
 import json
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -119,7 +120,9 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
     auth_header = websocket.headers.get("authorization", "")
     bearer_token = auth_header.replace("Bearer ", "", 1).strip() if auth_header.startswith("Bearer ") else ""
     cookie_token = websocket.cookies.get("access_token", "").strip()
-    token = bearer_token or cookie_token
+    allow_query_token = os.getenv("ALLOW_QUERY_ACCESS_TOKEN", "false").lower() == "true"
+    query_token = websocket.query_params.get("access_token", "").strip() if allow_query_token else ""
+    token = bearer_token or cookie_token or query_token
 
     if not token:
         await websocket.close(code=4401, reason="Unauthorized")

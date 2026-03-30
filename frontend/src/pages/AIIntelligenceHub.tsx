@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { BehaviorBadge } from "@/components/ai/BehaviorBadge";
 import { CampaignModal, CampaignData } from "@/components/ai/CampaignModal";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useSSEStream } from "@/hooks/useSSEStream";
 
@@ -49,9 +49,8 @@ export default function AIIntelligenceHub() {
     const fetchAIData = async () => {
       try {
         const res = await apiFetch(`${API_BASE}/api/v1/ai/recommendations`);
-        if (!res.ok) throw new Error("Failed to fetch AI recommendations");
-
-        const data = await res.json();
+        await ensureOk(res, "Failed to fetch AI recommendations");
+        const data = await readItemsArray(res);
 
         const mapped: AIRow[] = data.map((item: any) => ({
           id: item.id,

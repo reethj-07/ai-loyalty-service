@@ -3,7 +3,7 @@ import { MoreVertical, Plus, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 import {
   Dialog,
   DialogContent,
@@ -67,7 +67,8 @@ export default function BatchCampaigns() {
   const fetchCampaigns = async () => {
     try {
       const res = await apiFetch(`${API_BASE}/api/v1/campaigns`);
-      const data = await res.json();
+      await ensureOk(res, "Failed to fetch campaigns");
+      const data = await readItemsArray(res);
 
       const normalized: Campaign[] = data.map((c: any) => ({
         id: c.id,

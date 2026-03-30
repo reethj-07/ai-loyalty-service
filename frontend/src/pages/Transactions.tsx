@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { Plus, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,8 @@ export default function Transactions() {
 
   const fetchTransactions = async () => {
     const res = await apiFetch(`${API_BASE}/api/v1/transactions`);
-    const data = await res.json();
+    await ensureOk(res, "Failed to fetch transactions");
+    const data = await readItemsArray(res);
 
     const normalized: Transaction[] = data.map((txn: any) => ({
       id: txn.id,
@@ -56,15 +57,25 @@ export default function Transactions() {
       memberId: txn.member_id,
       merchant: txn.merchant ?? "Unknown",
       type: txn.type,
-      amount: `$${txn.amount.toFixed(2)}`,
+      amount: `$${Number(txn.amount || 0).toFixed(2)}`,
     }));
 
     setTransactions(normalized);
   };
 
   useEffect(() => {
-    fetchTransactions();
-    const interval = setInterval(fetchTransactions, 3000);
+    fetchTransactions().catch((error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch transactions",
+        variant: "destructive",
+      });
+    });
+    const interval = setInterval(() => {
+      fetchTransactions().catch(() => {
+        // Keep polling resilient; user-facing errors are shown on manual actions.
+      });
+    }, 3000);
     return () => clearInterval(interval);
   }, [API_BASE]);
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readItemsArray } from "@/lib/apiClient";
 
 interface CampaignLog {
   id: string;
@@ -21,7 +21,8 @@ export default function CommunicationLogs() {
     const fetchLogs = async () => {
       try {
         const res = await apiFetch(`${API_BASE}/api/v1/campaigns`);
-        const data = await res.json();
+        await ensureOk(res, "Failed to load communication logs");
+        const data = await readItemsArray(res);
         const normalized = data.map((c: any) => ({
           id: c.id,
           name: c.name,

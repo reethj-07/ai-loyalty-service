@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, ensureOk, readJson } from "@/lib/apiClient";
 
 interface MemberRow {
   id: string;
@@ -19,7 +19,8 @@ export default function MembersReport() {
     const fetchMembers = async () => {
       try {
         const res = await apiFetch(`${API_BASE}/api/v1/members?limit=1000`);
-        const payload = await res.json();
+        await ensureOk(res, "Failed to load members report");
+        const payload = await readJson(res);
         const items = Array.isArray(payload) ? payload : payload.items || [];
         const normalized = items.map((m: any) => ({
           id: m.id,
