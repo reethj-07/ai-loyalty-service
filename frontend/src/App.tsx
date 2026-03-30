@@ -25,6 +25,8 @@ import ActivityReport from "./pages/ActivityReport";
 import RealtimeDemo from "./pages/RealtimeDemo";
 import AgentConsole from "./pages/AgentConsole";
 import Dashboard from "./pages/Dashboard";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,8 @@ const App = () => (
           <Routes>
             {/* Login */}
             <Route path="/login" element={<Login />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
 
             {/* Default entry */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

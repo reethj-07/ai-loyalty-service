@@ -5,9 +5,7 @@ Implements Supabase Auth integration with JWT validation
 from typing import Optional
 from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
 import os
-from datetime import datetime
 
 from app.core.supabase_client import supabase
 
@@ -55,11 +53,10 @@ class AuthService:
                 "exp": None  # Supabase handles expiration internally
             }
 
-        except Exception as e:
-            raise HTTPException(
-                status_code=401,
-                detail=f"Invalid authentication credentials: {str(e)}"
-            )
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials")
 
     async def get_current_user(self, token: str) -> dict:
         """
@@ -135,7 +132,7 @@ class AuthService:
             elif "already registered" in error_msg.lower():
                 raise HTTPException(status_code=400, detail="Email already registered. Please sign in instead.")
             else:
-                raise HTTPException(status_code=400, detail=f"Sign up error: {error_msg}")
+                raise HTTPException(status_code=400, detail="Unable to create account")
 
     async def sign_in(self, email: str, password: str) -> dict:
         """
@@ -180,7 +177,7 @@ class AuthService:
             elif "is invalid" in error_msg:
                 raise HTTPException(status_code=400, detail=f"Invalid email format: {email}")
             else:
-                raise HTTPException(status_code=401, detail=f"Authentication error: {error_msg}")
+                raise HTTPException(status_code=401, detail="Authentication failed")
 
     async def sign_out(self, token: str) -> dict:
         """
@@ -197,8 +194,8 @@ class AuthService:
             # Users should just discard the token on client side
             # For server-side, we could maintain a blacklist
             return {"message": "Signed out successfully"}
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Sign out failed")
 
     async def refresh_session(self, refresh_token: str) -> dict:
         """
@@ -224,8 +221,8 @@ class AuthService:
             else:
                 raise HTTPException(status_code=401, detail="Refresh failed")
 
-        except Exception as e:
-            raise HTTPException(status_code=401, detail=str(e))
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     async def request_password_reset(self, email: str) -> dict:
         """

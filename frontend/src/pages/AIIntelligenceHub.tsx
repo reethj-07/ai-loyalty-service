@@ -39,7 +39,7 @@ export default function AIIntelligenceHub() {
   const { messages: proposalEvents } = useWebSocket("proposals");
   const { messages: transactionEvents } = useWebSocket("transactions");
   const { events: reasoningEvents } = useSSEStream(
-    `/api/v1/ai/stream/${selectedRow?.id ?? "demo-member"}`
+    selectedRow?.id ? `/api/v1/ai/stream/${selectedRow.id}` : null
   );
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL;

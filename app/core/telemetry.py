@@ -16,11 +16,19 @@ def setup_telemetry(app: FastAPI) -> None:
     except Exception:
         return
 
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
+    otel_enabled = os.getenv("OTEL_ENABLED", "true").lower() == "true"
+    if not otel_enabled:
+        return
+
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
+    if not endpoint:
+        return
+
+    insecure = endpoint.startswith("http://")
 
     resource = Resource.create({"service.name": "ai-loyalty-service"})
     tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=insecure)))
     trace.set_tracer_provider(tracer_provider)
 
     FastAPIInstrumentor.instrument_app(app)

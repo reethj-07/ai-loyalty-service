@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
+from uuid import UUID
 from app.services.campaign_recommender_ml import recommend_campaigns_ml
 from app.services.campaign_planner import launch_campaign
 from app.services.auto_segmentation import run_segmentation
@@ -17,22 +18,22 @@ router = APIRouter(
 
 
 @router.post("/pipeline/{member_id}")
-async def run_agentic_pipeline(member_id: str, prompt: Optional[str] = None):
+async def run_agentic_pipeline(member_id: UUID, prompt: Optional[str] = None):
     """
     Run the LangGraph agent pipeline for a member and return proposal + reasoning trace.
     """
     ai_service = get_ai_service()
-    return await ai_service.run_member_pipeline(member_id=member_id, prompt=prompt)
+    return await ai_service.run_member_pipeline(member_id=str(member_id), prompt=prompt)
 
 
 @router.get("/stream/{member_id}")
-async def stream_agentic_pipeline(member_id: str, prompt: Optional[str] = None):
+async def stream_agentic_pipeline(member_id: UUID, prompt: Optional[str] = None):
     """
     Stream LangGraph node execution events over SSE for real-time AI reasoning UX.
     """
     ai_service = get_ai_service()
     return StreamingResponse(
-        ai_service.stream_member_pipeline(member_id=member_id, prompt=prompt),
+        ai_service.stream_member_pipeline(member_id=str(member_id), prompt=prompt),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

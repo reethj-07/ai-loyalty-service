@@ -17,7 +17,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, metadata?: { full_name?: string; company?: string }) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<string>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -206,7 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signup = async (email: string, password: string) => {
+  const signup = async (
+    email: string,
+    password: string,
+    metadata?: { full_name?: string; company?: string }
+  ) => {
     try {
       const response = await fetch(API_ENDPOINTS.auth.signup, {
         method: 'POST',
@@ -214,7 +218,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: metadata?.full_name,
+          company: metadata?.company,
+        }),
       });
 
       if (!response.ok) {

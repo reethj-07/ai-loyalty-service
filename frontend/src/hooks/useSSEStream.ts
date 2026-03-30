@@ -5,33 +5,28 @@ interface StreamEvent {
   data: any;
 }
 
-export function useSSEStream(url: string) {
+export function useSSEStream(url: string | null) {
   const [events, setEvents] = useState<StreamEvent[]>([]);
-  const [status, setStatus] = useState<"connecting" | "open" | "closed" | "error">("connecting");
+  const [status, setStatus] = useState<"connecting" | "open" | "closed" | "error">(
+    url ? "connecting" : "closed"
+  );
 
   const resolvedUrl = useMemo(() => {
+    if (!url) return null;
     const base = import.meta.env.VITE_API_BASE_URL as string;
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     return `${(base || "http://localhost:8000").replace(/\/$/, "")}${url}`;
   }, [url]);
 
-  const streamUrl = useMemo(() => {
-    try {
-      const token = localStorage.getItem("auth_token");
-      if (!token || token.startsWith("demo-token-")) {
-        return resolvedUrl;
-      }
-
-      const parsed = new URL(resolvedUrl);
-      parsed.searchParams.set("access_token", token);
-      return parsed.toString();
-    } catch {
-      return resolvedUrl;
-    }
-  }, [resolvedUrl]);
+  const streamUrl = useMemo(() => resolvedUrl, [resolvedUrl]);
 
   useEffect(() => {
-    const source = new EventSource(streamUrl);
+    if (!streamUrl) {
+      setStatus("closed");
+      return;
+    }
+
+    const source = new EventSource(streamUrl, { withCredentials: true });
     setStatus("connecting");
 
     source.onopen = () => setStatus("open");

@@ -62,7 +62,7 @@ export default function Dashboard() {
     load();
   }, [API_BASE]);
 
-  const latestMemberForReasoning = useMemo(() => selectedPoint?.memberId || "member-1", [selectedPoint]);
+  const latestMemberForReasoning = useMemo(() => selectedPoint?.memberId ?? scatterData[0]?.memberId ?? null, [selectedPoint, scatterData]);
 
   return (
     <DashboardLayout breadcrumbs={[{ label: "Home", href: "/dashboard" }]}>

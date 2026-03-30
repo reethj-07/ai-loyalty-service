@@ -9,9 +9,12 @@ from datetime import datetime
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
+from app.core.auth import auth_service
 from app.core.ws_manager import manager
 
 router = APIRouter(tags=["realtime"])
+
+ALLOWED_CHANNELS = {"proposals", "transactions", "alerts"}
 
 
 # ============================================
@@ -109,6 +112,25 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
       - "alerts"        → behavioral detection alerts
       - "kpis/{id}"     → live campaign KPI updates
     """
+    if channel not in ALLOWED_CHANNELS and not channel.startswith("kpis"):
+        await websocket.close(code=1008, reason="Invalid channel")
+        return
+
+    auth_header = websocket.headers.get("authorization", "")
+    bearer_token = auth_header.replace("Bearer ", "", 1).strip() if auth_header.startswith("Bearer ") else ""
+    cookie_token = websocket.cookies.get("access_token", "").strip()
+    token = bearer_token or cookie_token
+
+    if not token:
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
+    try:
+        user = await auth_service.get_current_user(token)
+    except Exception:
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
     await manager.connect(websocket, channel)
 
     try:
@@ -117,6 +139,7 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             {
             "type": "connected",
             "channel": channel,
+            "user_id": user.get("id"),
             "message": "WebSocket connected successfully",
             "timestamp": datetime.now().isoformat()
             },

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, ShieldCheck, Sparkles, LineChart, LockKeyhole } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, ShieldCheck, Sparkles, LineChart, LockKeyhole, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,16 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, signup, requestPasswordReset, isAuthenticated } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [acceptLegal, setAcceptLegal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +29,23 @@ export default function Login() {
     /[a-z]/.test(password) ? null : "One lowercase letter",
     /\d/.test(password) ? null : "One number",
   ].filter(Boolean) as string[];
+
+  const passwordStrength = useMemo(() => {
+    if (!password) {
+      return { score: 0, label: "", tone: "bg-muted" };
+    }
+
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password) || password.length >= 12) score += 1;
+
+    if (score <= 1) return { score, label: "Weak", tone: "bg-red-500" };
+    if (score === 2) return { score, label: "Fair", tone: "bg-amber-500" };
+    if (score === 3) return { score, label: "Good", tone: "bg-yellow-500" };
+    return { score, label: "Strong", tone: "bg-emerald-500" };
+  }, [password]);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -37,6 +59,12 @@ export default function Login() {
     setError(null);
     setSuccess(null);
 
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Please enter your work email.");
+      return;
+    }
+
     if (mode === "signup" && password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -47,11 +75,19 @@ export default function Login() {
       return;
     }
 
+    if (mode === "signup" && !acceptLegal) {
+      setError("Please accept the Terms and Privacy Policy to create your account.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       if (mode === "signup") {
-        await signup(email, password);
+        await signup(normalizedEmail, password, {
+          full_name: fullName.trim() || undefined,
+          company: company.trim() || undefined,
+        });
         const createdSessionToken = localStorage.getItem("auth_token");
 
         if (createdSessionToken) {
@@ -59,13 +95,16 @@ export default function Login() {
           return;
         }
 
-        setSuccess("Account created successfully. Please verify your email if required, then sign in.");
+        setSuccess("Account created. Check your inbox to verify your email, then sign in.");
         setMode("signin");
+        setFullName("");
+        setCompany("");
+        setAcceptLegal(false);
         setPassword("");
         setConfirmPassword("");
         return;
       } else {
-        await login(email, password);
+        await login(normalizedEmail, password);
         navigate("/dashboard");
       }
     } catch (err: any) {
@@ -111,24 +150,24 @@ export default function Login() {
 
           <div>
             <h1 className="text-4xl font-semibold leading-tight tracking-tight text-foreground">
-              Premium Growth Operating System for Customer Revenue Teams
+              Loyalty Experience Platform for Retention and Revenue Teams
             </h1>
             <p className="mt-4 text-base text-muted-foreground max-w-xl">
-              Orchestrate retention, AI campaigns, and lifecycle analytics from one secure control center.
+              Launch white-label loyalty programs, AI-driven lifecycle journeys, and real-time performance analytics from one secure workspace.
             </p>
 
             <div className="mt-8 space-y-4">
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-primary" />
-                Enterprise-grade auth with Supabase and role-based access
+                Enterprise-grade security, access controls, and audit-ready operations
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <LineChart className="h-4 w-4 text-primary" />
-                Unified campaigns, member intelligence, and KPI visibility
+                Unified member intelligence, campaign orchestration, and ROI visibility
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <LockKeyhole className="h-4 w-4 text-primary" />
-                Production-ready API integration with protected operations
+                Built for modern loyalty stacks with API-first, white-label flexibility
               </div>
             </div>
           </div>
@@ -146,24 +185,53 @@ export default function Login() {
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">
-                  {mode === "signup" ? "Create account" : "Welcome back"}
+                  {mode === "signup" ? "Create your workspace" : "Welcome back"}
                 </div>
                 <div className="font-semibold text-foreground">Asteria Growth Cloud</div>
               </div>
             </div>
             <h2 className="text-2xl font-semibold text-foreground">
-              {mode === "signup" ? "Create your workspace account" : "Sign in to your workspace"}
+              {mode === "signup" ? "Create your loyalty operations account" : "Sign in to your loyalty workspace"}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {mode === "signup"
-                ? "First time here? Create your account to start using the dashboard."
-                : "Already have an account? Sign in to continue."}
+                ? "Set up your account to launch campaigns, monitor member behavior, and review AI recommendations."
+                : "Use your work credentials to access campaigns, analytics, and member operations."}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "signup" && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="fullName">Full Name</label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    autoComplete="name"
+                    placeholder="Jane Patel"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground" htmlFor="company">Company</label>
+                  <Input
+                    id="company"
+                    type="text"
+                    autoComplete="organization"
+                    placeholder="Acme Loyalty Co"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground" htmlFor="email">Email</label>
+              <label className="text-sm font-medium text-foreground" htmlFor="email">Work Email</label>
               <Input
                 id="email"
                 type="email"
@@ -177,38 +245,86 @@ export default function Login() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground" htmlFor="password">Password</label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-11 pr-10"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {mode === "signup" && password.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                Password must include at least 8 chars, uppercase, lowercase, and number.
+              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Password strength</span>
+                  <span className="font-medium">{passwordStrength.label}</span>
+                </div>
+                <div className="mb-2 grid grid-cols-4 gap-1">
+                  {[0, 1, 2, 3].map((idx) => (
+                    <div
+                      key={idx}
+                      className={`h-1.5 rounded ${idx < passwordStrength.score ? passwordStrength.tone : "bg-muted"}`}
+                    />
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Use at least 8 characters, including uppercase, lowercase, and a number.
+                </div>
               </div>
             )}
 
             {mode === "signup" && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground" htmlFor="confirmPassword">Confirm Password</label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="h-11 pr-10"
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
+            )}
+
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                  checked={acceptLegal}
+                  onChange={(e) => setAcceptLegal(e.target.checked)}
+                />
+                <span>
+                  I agree to the <Link to="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+                </span>
+              </label>
             )}
 
             {error && (
@@ -235,7 +351,7 @@ export default function Login() {
                 </>
               ) : (
                 <>
-                  {mode === "signup" ? "Create account" : "Continue"}
+                  {mode === "signup" ? "Create Workspace" : "Continue to Dashboard"}
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </>
               )}
@@ -252,7 +368,7 @@ export default function Login() {
                   setResetEmail(email);
                 }}
               >
-                Forgot password?
+                Forgot your password?
               </button>
             )}
           </form>
@@ -287,6 +403,7 @@ export default function Login() {
                     setMode("signup");
                     setError(null);
                     setSuccess(null);
+                    setAcceptLegal(false);
                   }}
                 >
                   Sign up
@@ -302,6 +419,7 @@ export default function Login() {
                     setMode("signin");
                     setError(null);
                     setSuccess(null);
+                    setAcceptLegal(false);
                   }}
                 >
                   Sign in
@@ -311,7 +429,7 @@ export default function Login() {
           </div>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Tip: if sign in fails right after sign up, confirm the user in Supabase Auth first.
+            Secure sign-in is managed with token rotation and protected sessions.
           </p>
         </div>
       </div>

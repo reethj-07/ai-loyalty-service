@@ -57,12 +57,14 @@ async def auth_middleware(request: Request, call_next):
     if path.startswith("/docs") or path.startswith("/openapi") or path.startswith("/redoc"):
         return await call_next(request)
 
+    allow_query_token = os.getenv("ALLOW_QUERY_ACCESS_TOKEN", "false").lower() == "true"
     supports_query_token = (
         path.startswith("/api/v1/ai/stream/")
         or path.startswith("/api/v1/realtime/transactions")
     )
 
-    if supports_query_token:
+    # Keep query-token auth behind an explicit flag for legacy clients.
+    if allow_query_token and supports_query_token:
         query_token = request.query_params.get("access_token", "").strip()
         if query_token:
             try:
