@@ -23,7 +23,7 @@ flowchart LR
   CE --> OTEL
   OTEL --> J[Jaeger]
 
-  API --> PM[/metrics]
+  API --> PM["/metrics"]
   PM --> PR[Prometheus]
   PR --> GF[Grafana]
 
